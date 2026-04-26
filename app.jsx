@@ -32300,6 +32300,7 @@ function App(){
                       e.preventDefault();
                       e.stopPropagation();
                       window._obLp={fired:false,timer:null,moved:false};
+                      window._obLastTouchAction=Date.now();
                       action();
                     }}
                     onTouchCancel={(e)=>{
@@ -32307,6 +32308,13 @@ function App(){
                       const lp=window._obLp||{};
                       if(lp.timer){clearTimeout(lp.timer);}
                       window._obLp={fired:false,timer:null,moved:false};
+                    }}
+                    onClick={(e)=>{
+                      e.stopPropagation();
+                      if(Date.now()-(window._obLastTouchAction||0)<500)return;
+                      const lp=window._obLp||{};
+                      if(lp.fired||lp.moved)return;
+                      action();
                     }}
                     style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,flex:"0 0 18%",padding:"8px 2px",borderRadius:14,border:"none",background:"transparent",cursor:_cP,touchAction:"manipulation",WebkitTapHighlightColor:"transparent",minHeight:56,transition:"transform 0.08s ease, background 0.12s ease"}}
                     onTouchStartCapture={(e)=>{ try { e.currentTarget.style.transform="scale(0.94)"; e.currentTarget.style.background="rgba(192,112,136,0.06)"; } catch{} }}
@@ -38028,7 +38036,7 @@ function App(){
                       _parentTips = ["Keep following " + _bn6 + "'s cues", "Evening cluster feeds are normal and don't mean low supply"];
                     } else if (_bCount > 0) {
                       _statusText = _bn6 + " has had " + _bCount + " feed" + (_bCount!==1?"s":"") + " so far today (" + _bTarget + " is typical for this age).";
-                      _obubbaDoing = "OBubba will remind you when the next feed is due based on " + _bn6 + "'s personal rhythm.";
+                      _obubbaDoing = "OBubba can remind you when the next feed may be due, based on " + _bn6 + "'s recent rhythm.";
                       _parentTips = ["Watch for hunger cues: rooting, hand-to-mouth, fussing", "Crying is a late hunger cue — try to catch them earlier"];
                     } else {
                       _statusText = "No feeds logged yet today. " + _bn6 + " typically needs " + _bTarget + "–" + (fc6.breastTarget?fc6.breastTarget[1]:(_bTarget+2)) + " feeds per day at this age.";
@@ -42028,7 +42036,7 @@ function App(){
               <div style={{background:"var(--card-bg-alt)",border:"1px solid var(--card-border)",borderRadius:12,padding:"12px 14px",marginBottom:4}}>
                 <div style={{fontSize:11,color:C.mid,lineHeight:1.7}}>
                   <span style={{fontWeight:700,color:C.deep}}>ℹ️ About this guidance</span><br/>
-                  Activities: NHS Start4Life developmental play guidance. Milestones: NHS developmental reviews framework. Growth: WHO Child Growth Standards. Every baby develops at their own pace. use these as inspiration, not a checklist. If you have concerns, speak to your ${_doctor}.
+                  Activities: NHS Start4Life developmental play guidance. Milestones: NHS developmental reviews framework. Growth: WHO Child Growth Standards. Every baby develops at their own pace. use these as inspiration, not a checklist. If you have concerns, speak to your GP or health visitor.
                 </div>
               </div>
 
@@ -42538,7 +42546,7 @@ function App(){
                   const _wt = localStorage.getItem("ob_widget_theme")||"auto";
                   const _active = _wt === t.id;
                   return (
-                    <button key={t.id} onClick={()=>{
+                    <button key={t.id} type="button" aria-label={"Widget colour: "+t.label} onClick={()=>{
                       haptic();
                       try{localStorage.setItem("ob_widget_theme",t.id);}catch{}
                       // Push to Android widget via SharedPreferences bridge
@@ -48183,8 +48191,9 @@ Severe: breathing changes, swelling of face/throat, very pale or floppy. please 
         for(let d=1;d<=daysInMonth;d++)cells.push(d);
         return(
           <div role="dialog" aria-modal="true" onClick={()=>setShowCalendar(false)} style={{position:"fixed",inset:0,background:"rgba(44,31,26,0.55)",backdropFilter:"blur(4px)",zIndex:9990,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-            <div onClick={e=>e.stopPropagation()} style={{background:"var(--bg-solid)",borderRadius:24,padding:"24px 20px",maxWidth:360,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,0.2)"}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+            <div onClick={e=>e.stopPropagation()} style={{background:"var(--bg-solid)",borderRadius:24,padding:"24px 20px",maxWidth:360,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,0.2)",position:"relative"}}>
+              <button type="button" aria-label="Close" onClick={()=>setShowCalendar(false)} style={{position:"absolute",top:10,right:10,width:34,height:34,borderRadius:"50%",border:"1px solid var(--card-border)",background:"var(--card-bg-solid)",color:C.mid,fontSize:18,cursor:_cP,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,paddingRight:30}}>
                 <button onClick={prevMonth} style={{background:"var(--card-bg)",border:`1px solid var(--card-border)`,borderRadius:10,width:36,height:36,cursor:_cP,fontSize:18,color:C.mid,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
                 <div style={{fontSize:18,fontWeight:700,color:C.deep,fontFamily:"Georgia,serif"}}>{monthName}</div>
                 <button onClick={nextMonth} style={{background:"var(--card-bg)",border:`1px solid var(--card-border)`,borderRadius:10,width:36,height:36,cursor:_cP,fontSize:18,color:C.mid,display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
