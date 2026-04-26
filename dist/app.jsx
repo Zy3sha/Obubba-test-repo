@@ -120,6 +120,16 @@ if (!CanvasRenderingContext2D.prototype.roundRect) {
 const STORAGE_KEY = "babyTracker_v6";
 const params = new URLSearchParams(window.location.search);
 const quickAction = params.get("action");
+const OB_DEBUG = (() => {
+  try {
+    return params.get("debug") === "1" ||
+      localStorage.getItem("ob_debug") === "1" ||
+      /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname || "");
+  } catch { return false; }
+})();
+if (!OB_DEBUG) {
+  try { console.log = function(){}; } catch {}
+}
 
 const uid = () => { const _id = Date.now().toString(36)+Math.random().toString(36).slice(2,5); if(window._localEntryIds) window._localEntryIds.add(_id); return _id; };
 window._localEntryIds = new Set();
@@ -1043,7 +1053,7 @@ const ICONS={feed:"🍼",nap:"😴",wake:"☀️",sleep:"🌙",poop:"💩",tummy
 const NAMES={feed:"Feed",nap:"Nap",wake:"Wake Up",sleep:"Bedtime",poop:"Nappy",tummy:"Tummy Time",bath:"Bath",outdoor:"Outdoor/Walk",play:"Play Time",reading:"Story Time",massage:"Massage",swimming:"Swimming",skintokin:"Skin to Skin",music:"Music"};
 const POOP_TYPES=["Seedy","Mucousy","Watery","Formed/solid","Pellet-like","Frothy","Bloody/streaked","Meconium","Other"];
 const POOP_TYPE_INFO={"Seedy":{normal:true,desc:"Small seed-like bits are completely normal, especially in breastfed babies. Shows your baby is digesting milk well."},"Green":{normal:true,desc:"Usually nothing to worry about — can happen with formula, dietary changes, or more foremilk. If baby seems well, no action needed."},"Brown":{normal:true,desc:"Perfectly normal and very common, especially once your baby starts solid foods."},"Dark green":{normal:true,desc:"Usually normal — can be caused by iron in formula or supplements. If baby seems well and is feeding normally, no need to worry."},"Orange":{normal:true,desc:"Normal and often seen in breastfed babies. Can also appear with orange-coloured foods like carrots or sweet potato."},"Black/tarry":{normal:false,desc:"Only normal in the first few days of life (meconium). After that, contact your GP or health visitor promptly as it may indicate blood in the stool."},"White/pale":{normal:false,desc:"Needs urgent medical attention. Contact your GP the same day — it can be a sign of a liver problem that needs checking."},"Mucousy":{normal:true,desc:"A small amount of mucus is common and often linked to teething, a cold, or drooling. If it persists, mention it to your health visitor."},"Watery":{normal:false,desc:"Can be a sign of diarrhoea. Keep baby hydrated and contact your GP if it lasts more than 24 hours, or sooner if baby is under 3 months."},"Formed/solid":{normal:true,desc:"Soft, formed poo is normal once your baby starts solids. It should be easy to pass and not hard or dry."},"Pellet-like":{normal:false,desc:"Small, hard pellets can be a sign of constipation. Try extra fluids and speak to your health visitor if it continues."},"Frothy":{normal:true,desc:"Usually harmless — can happen if a breastfed baby gets more foremilk than hindmilk. Not a concern if baby is gaining weight well."},"Bloody/streaked":{normal:false,desc:"Blood in baby's nappy should always be checked by a doctor. Small streaks can sometimes be from straining, but contact your GP to be safe."},"Meconium":{normal:true,desc:"The thick, dark, sticky poo in baby's first day or two. Completely normal — shows bowels are working. Should clear within a few days."},"Other":{normal:true,desc:"Baby poo varies a lot day to day. If something doesn't seem right, your health visitor is always happy to help."}};
-const POOP_COLOUR_INFO={"Yellow/Mustard":{normal:true,desc:"The most common colour for breastfed babies — perfectly healthy. Often soft or seedy in texture."},"Brown/Tan":{normal:true,desc:"Completely normal, especially in formula-fed babies and once solids are introduced."},"Orange":{normal:true,desc:"Normal and often seen in breastfed babies. Can also appear with orange-coloured foods like carrots or sweet potato."},"Green":{normal:true,desc:"Usually normal — can be caused by formula, green vegetables, or a passing tummy bug. Fine if baby is feeding well."},"Dark/Black":{normal:false,desc:"Only normal in the first couple of days (meconium). After that, speak to your GP promptly as it could indicate bleeding."},"Pale/White":{normal:false,desc:"Needs same-day medical attention. Can be a sign that the liver isn't producing enough bile."},"Red-tinged":{normal:false,desc:"Can sometimes come from foods like beetroot, but any unexplained redness should be seen by your GP. Keep the nappy to show them."}};
+const POOP_COLOUR_INFO={"Yellow/Mustard":{normal:true,desc:"The most common colour for breastfed babies and usually reassuring. Often soft or seedy in texture."},"Brown/Tan":{normal:true,desc:"Usually normal, especially in formula-fed babies and once solids are introduced."},"Orange":{normal:true,desc:"Usually normal and often seen in breastfed babies. Can also appear with orange-coloured foods like carrots or sweet potato."},"Green":{normal:true,desc:"Usually normal — can be caused by formula, green vegetables, or a passing tummy bug. Fine if baby is feeding well."},"Dark/Black":{normal:false,desc:"Only normal in the first couple of days (meconium). After that, speak to your GP promptly as it could indicate bleeding."},"Pale/White":{normal:false,desc:"Needs same-day medical attention. Can be a sign that the liver isn't producing enough bile."},"Red-tinged":{normal:false,desc:"Can sometimes come from foods like beetroot, but any unexplained redness should be seen by your GP. Keep the nappy to show them."}};
 const POOP_SAFETY_FLAGS={"Black/tarry":`Black or tarry stools after the first few days may need medical attention. contact your ${_doctor}.`,"White/pale":`Persistently pale or chalky stools can indicate a liver condition. mention this to your ${_doctor} promptly.`,"Bloody/streaked":`Blood in stools can have many causes, but if new or persistent, contact your ${_doctor}.`,"Meconium":"Meconium (dark, sticky first stools) is normal in the first 48–72 hours. If still passing meconium after day 3–4, mention it to your midwife or health visitor."};
 
 // 14 major UK allergens. NHS/FSA
@@ -3058,7 +3068,7 @@ function buildSleepCoachDay(style, ageWeeks, dayNumber, lastNightDiag) {
     return {
       day: dayNumber,
       focus: "Watch and wait",
-      tactic: "Continue the rhythm. OBubba will flag any drift and auto-adjust bedtime. Don't respond to minor stirrings — pause 2 min before going in.",
+      tactic: "Continue the rhythm. OBubba may spot drift and gently adjust the suggested bedtime. For minor stirrings, try pausing briefly before going in.",
       objective: "Longest stretch growing week-over-week",
       why: "Parent-led isn't doing nothing — it's protecting the rhythm that lets baby's brain mature. For some babies this is all that's needed.",
       warnings: []
@@ -6838,24 +6848,12 @@ function App(){
   // Active on native (iOS/Android). PWA users get everything free
   // Native users get 14-day trial, then paywall activates for premium features
   const STORE_READY = !!window._isNative;
+  const _isOwner = false;
 
-  // Owner override. always gets premium (your personal devices)
-  // Uses async hash comparison so the unlock code is never in plaintext source
-  const[_isOwner,_setIsOwner]=useState(false);
-  useEffect(()=>{
-    (async()=>{try{
-      const _code=localStorage.getItem("ob_owner_unlock");
-      if(!_code)return;
-      const _buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(_code));
-      const _hex=Array.from(new Uint8Array(_buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
-      if(_hex==="2bb3a66306791b8cce6ddc59324c0cb8cbcd6506f6c28cea39d4b142c248884b") _setIsOwner(true);
-    }catch{}})();
-  },[]);
-  // Premium state: owner always premium, otherwise check localStorage cache (updated by entitlement check)
+  // Premium state: native purchases/trials and local entitlement cache.
   const _cachedPremium = (()=>{try{return localStorage.getItem("ob_premium")==="1";}catch{return false;}})();
   const _villageActive = (()=>{try{const ve=localStorage.getItem("ob_village_end");return ve && new Date(ve).getTime()>Date.now();}catch{return false;}})();
   const[isPremium,setIsPremium]=useState(_cachedPremium || _villageActive);
-  useEffect(()=>{ if(_isOwner) setIsPremium(true); },[_isOwner]);
   const[heroWhyOpen,setHeroWhyOpen]=useState(false);
   const[poopWhyOpen,setPoopWhyOpen]=useState(false);
   const[todayPlanOpen,setTodayPlanOpen]=useState(false);
@@ -8354,7 +8352,7 @@ function App(){
     const _warmHints = {
       nap_prediction: "This learns " + (babyName||"your baby") + "'s unique rhythm. it gets better every day you log.",
       bedtime: "We calculate this from " + (babyName||"your baby") + "'s actual sleep patterns, not just age charts.",
-      sleep_analysis: "Like having a sleep consultant review " + (babyName||"your baby") + "'s week with you.",
+      sleep_analysis: "A calm weekly review of " + (babyName||"your baby") + "'s sleep patterns, with gentle next steps.",
       today_plan: "A personalised schedule built around " + (babyName||"your baby") + "'s real nap patterns.",
       growth: "Track " + (babyName||"your baby") + "'s growth against WHO guidelines. spot trends early.",
       activities: "Age-perfect activities chosen for exactly where " + (babyName||"your baby") + " is right now.",
@@ -10392,7 +10390,14 @@ function App(){
       status = await doReq(_token);
       // If 401/403, force-refresh the token and retry once
       if(status === 401 || status === 403) {
-        const fresh = await _user.getIdToken(true).catch(()=>null);
+        const sdkUser = window._fb?.auth?.currentUser || null;
+        let fresh = sdkUser ? await sdkUser.getIdToken(true).catch(()=>null) : null;
+        if(!fresh) {
+          try {
+            const refreshToken = window._obRestRefreshToken || localStorage.getItem("ob_rest_refresh_token");
+            if(refreshToken) fresh = await _refreshAuthToken(refreshToken);
+          } catch {}
+        }
         if(fresh) status = await doReq(fresh);
       }
       return status >= 200 && status < 300;
@@ -13701,7 +13706,7 @@ function App(){
         if (_budgetOver && _napsDone < _expectedForAge) {
           _dot = "#7BA68C"; _label = "Great naps today. skip to bedtime";
           _timing = "Bedtime at ~" + fmt12(_bed.time) + " · " + hm(_totalNapMin) + " day sleep (budget met)";
-          _rightNow = _name + " had great naps today (" + hm(_totalNapMin) + " total). Sleep consultants recommend skipping the remaining nap and going straight to an earlier bedtime. More day sleep can steal from night sleep.";
+          _rightNow = _name + " had strong naps today (" + hm(_totalNapMin) + " total). It may make sense to skip the remaining nap and aim for an earlier bedtime, because too much late day sleep can make bedtime harder.";
         } else {
           _dot = "#7BA68C"; _label = "All naps complete";
           _timing = "Bedtime at ~" + fmt12(_bed.time) + " · " + _napsDone + " nap" + (_napsDone !== 1 ? "s" : "") + " logged today";
@@ -16564,7 +16569,7 @@ function App(){
     if (!match || daysWithFewer < 4) return null;
     const _adviceByTrans = {
       "3-2": `Stretch the morning wake window gradually. add 15 minutes every few days until it reaches 2.5–3 hours. The 3rd nap will start shortening naturally. When it disappears, shift the afternoon nap slightly earlier. Use a 6–6:30pm bedtime on days the 3rd nap is skipped. overtiredness causes more night wakes, not fewer. Give it 2–4 weeks. Some days will still need 3 naps and that's fine.`,
-      "2-1": `Push the morning nap 15 minutes later every few days until it sits around 12–12:30pm. The afternoon nap will naturally shorten and drop. During the transition (which can take 4–6 weeks), some days will be 2-nap days and some 1-nap. that's normal. On 1-nap days, bedtime may need to move as early as 6pm. Watch for overtiredness signs: clinginess, eye-rubbing, falling asleep in the car.`,
+      "2-1": `Push the morning nap 15 minutes later every few days until it sits around 12–12:30pm. The afternoon nap may gradually shorten and drop. During the transition (which can take 4–6 weeks), some days will be 2-nap days and some 1-nap. that's normal. On 1-nap days, bedtime may need to move as early as 6pm. Watch for overtiredness signs: clinginess, eye-rubbing, falling asleep in the car.`,
       "4-3": `Extend the first wake window by 15–30 minutes over a week. The 4th nap will start shortening and eventually drop. Keep bedtime consistent at 7–7:30pm. On days the 4th nap is skipped, bring bedtime forward by 15 minutes.`
     };
     const _transKey = match.from + "-" + match.to;
@@ -19703,7 +19708,7 @@ function App(){
           icon:"🌙",
           title: shortNapsExplain ? "Early Bedtime (Compensating for Short Naps)" : "Bedtime May Be Too Early",
           body: shortNapsExplain
-            ? `Average bedtime of ${mtp(avgBed)} is earlier than usual because day naps average ${hm(avgNapTotal)} (target ~${hm(napTarget)}). This is the right approach. more night sleep compensates for less day sleep. As naps lengthen, bedtime will naturally shift later. No action needed.`
+            ? `Average bedtime of ${mtp(avgBed)} is earlier than usual because day naps average ${hm(avgNapTotal)} (target ~${hm(napTarget)}). This looks like a reasonable approach: more night sleep can help compensate for less day sleep. As naps lengthen, bedtime may shift later.`
             : `Average bedtime of ${mtp(avgBed)} is quite early. If you're seeing early morning waking (before 6am), try nudging bedtime 10-15 minutes later every few days. The ideal window for most babies is 6:30-7:30pm.`
         });
       } else if (bedH > 20) {
@@ -31538,7 +31543,7 @@ function App(){
                   "WHY: " + (babyName||"Baby") + "'s last nap ended too early for the next wake window to safely reach " + _bedTime + ". Without a bridge, the gap is long enough to push past overtired, which usually backfires as hard wakes in the first half of the night.\n\n" +
                   "WHEN: Put " + (babyName||"baby") + " down at around " + _bridgeStartLabel + " — earlier if the sleepy cues start appearing before that.\n\n" +
                   "HOW LONG: Cap this nap at " + _bridgeDurMin + " minutes. Any longer and it starts to eat into the pressure needed for a good night. Gently wake if needed.\n\n" +
-                  "The engine will automatically adjust tonight's bedtime around the bridge nap.";
+                  "The engine will gently adjust tonight's suggested bedtime around the bridge nap.";
                 return (
                   <button onClick={()=>{
                     haptic(20);
@@ -35154,7 +35159,7 @@ function App(){
                 return (
                   <div style={{padding:"8px 0"}}>
                     <div style={{fontSize:11,fontFamily:_fM,color:C.lt,textTransform:"uppercase",letterSpacing:_ls1,marginBottom:4}}>Sleep Engine Schedule for {age?fmtAge(age):""}</div>
-                    <div style={{fontSize:11,color:C.lt,marginBottom:10,fontStyle:"italic"}}>Powered by the OBubba Sleep Engine {"\u2014"} built from pediatric sleep research & consultant guidelines. Every baby is different {"\u2014"} always follow sleepy cues.</div>
+                    <div style={{fontSize:11,color:C.lt,marginBottom:10,fontStyle:"italic"}}>Powered by the OBubba Sleep Engine {"\u2014"} informed by pediatric sleep research and real family patterns. Every baby is different {"\u2014"} always follow sleepy cues.</div>
                     <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
                       <div style={{flex:1,minWidth:90,padding:"6px 8px",borderRadius:8,background:"var(--card-bg-alt)",border:`1px solid ${C.blush}`,textAlign:"center"}}>
                         <div style={{fontSize:10,color:C.lt}}>Wake windows</div>
@@ -36389,7 +36394,7 @@ function App(){
                   let tip = null;
                   if (w2 < 13 && wakeCount <= 4) tip = `Night wakes are completely normal at this age. Expected feeds: ${expectedFeeds}/night. baby genuinely needs feeding overnight.`;
                   else if (w2 >= 14 && w2 <= 22 && wakeCount >= 3) tip = `Frequent wakes around 4 months are due to sleep cycle maturation. not a sign of anything wrong. Expected feeds: ${expectedFeeds}/night. This is temporary.`;
-                  else if (w2 < 26 && wakeCount <= 2) tip = hasFeed ? `Feeding at night is still normal (expected: ${expectedFeeds}/night). As daytime feeds increase, night feeds will naturally reduce.` : "Good settling tonight. Consistent responses help baby learn to self-soothe over time.";
+                  else if (w2 < 26 && wakeCount <= 2) tip = hasFeed ? `Feeding at night is still normal (expected: ${expectedFeeds}/night). As daytime feeds increase, night feeds may gradually reduce.` : "Good settling tonight. Consistent responses can support baby as they learn to self-soothe over time.";
                   else if (w2 < 26 && wakeCount >= 3) tip = `More wakes than usual (expected feeds: ${expectedFeeds}/night). Check for growth spurt, teething, or developmental phase.`;
                   else if (w2 >= 26 && wakeCount === 0) tip = "No wakes yet. well done! Consistent routine is paying off.";
                   else if (w2 >= 26 && wakeCount <= 1) tip = hasFeed ? `One feed overnight is still normal up to 9-12 months (expected: ${expectedFeeds}). Gradually reducing the amount by 10-20ml every few nights can help it drop.` : "One wake that settled without a feed. great progress toward sleeping through.";
@@ -36997,7 +37002,7 @@ function App(){
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",marginBottom:10,borderRadius:14,background:"linear-gradient(135deg,rgba(192,112,136,0.06),rgba(123,104,238,0.06))",border:"1.5px solid rgba(192,112,136,0.15)"}}>
                   <div style={_S.flex1}>
                     <div style={{fontSize:13,fontWeight:600,color:C.deep}}>You're doing brilliantly 💛</div>
-                    <div style={{fontSize:11,color:C.lt,lineHeight:1.4,marginTop:2}}>For less than a coffee a month, gift yourself better nights and happier days. {babyName||"Your little one"} deserves a well-rested parent too.</div>
+                    <div style={{fontSize:11,color:C.lt,lineHeight:1.4,marginTop:2}}>For less than a coffee a month, give yourself calmer guidance through the busy days and long nights. {babyName||"Your little one"} deserves a supported parent too.</div>
                   </div>
                   <button onClick={()=>triggerPaywall("trial")} style={{padding:"7px 14px",borderRadius:99,background:C.ter,color:"white",border:"none",fontSize:11,fontWeight:700,cursor:_cP,marginRight:8,whiteSpace:"nowrap"}}>See plans</button>
                   <button onClick={()=>{setTrialBannerDismissed(true);try{localStorage.setItem("trial_banner_date",todayStr());}catch{};}} style={{background:"none",border:"none",color:C.lt,fontSize:14,cursor:_cP,padding:"12px",minWidth:44,minHeight:44,display:"flex",alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>✕</button>
@@ -37015,11 +37020,11 @@ function App(){
                       ? "We hope the personalised predictions and sleep guidance have made a difference for you and " + (babyName||"your baby") + ". If bedtimes have been calmer, naps more predictable, or you've just worried a little less. that's what OBubba is for."
                       : trialDaysLeft <= 3
                         ? "Has " + (babyName||"your baby") + "'s sleep improved? Have the predictions helped you plan your day? If OBubba has made even one bedtime easier, imagine what it can do over the coming months."
-                        : "OBubba works best when it knows your baby. The longer you use personalised predictions, the more accurate they become. like having a sleep consultant who really knows " + (babyName||"your little one") + "."
+                        : "OBubba works best when it knows your baby. The longer you use personalised predictions, the more personal and useful they can become."
                     }
                   </div>
                   <div style={{fontSize:11.5,color:C.ter,fontStyle:"italic",lineHeight:1.5,marginBottom:10}}>
-                    For less than a coffee a month, you can gift yourself a happier baby and better nights. You deserve to enjoy this time, not just survive it.
+                    For less than a coffee a month, you can give yourself calmer guidance through the messy nights. You deserve to enjoy this time, not just survive it.
                   </div>
                   <div style={{display:"flex",gap:8,alignItems:"center"}}>
                     <button onClick={()=>triggerPaywall("trial")} style={{padding:"8px 16px",borderRadius:99,background:`linear-gradient(135deg,${C.ter},#a85a44)`,border:"none",color:"white",fontSize:12,fontWeight:600,cursor:_cP,boxShadow:"0 2px 10px "+C.ter+"30"}}>
@@ -37974,7 +37979,7 @@ function App(){
                   if (!hasAccess()) return (
                     <div className="glass-card" style={{padding:"14px 16px",marginBottom:12,textAlign:"center"}}>
                       <div style={{fontSize:14,fontWeight:700,color:C.deep,marginBottom:6}}>Feeding Check-in</div>
-                      <div style={{fontSize:12,color:C.lt,fontStyle:"italic",marginBottom:10}}>Unlock personalised feeding analysis, intake tracking, and consultant-style recommendations.</div>
+                      <div style={{fontSize:12,color:C.lt,fontStyle:"italic",marginBottom:10}}>Unlock personalised feeding patterns, intake tracking, and gentle next steps.</div>
                       <button onClick={()=>triggerPaywall("feeding_checkin",true)} style={{padding:"8px 20px",borderRadius:99,border:"1px solid "+C.gold+"40",background:C.gold+"10",color:C.gold,fontSize:12,fontWeight:700,cursor:_cP}}>Unlock feeding insights</button>
                     </div>
                   );
@@ -42600,7 +42605,7 @@ function App(){
             <div style={_S.flexCenter10}>
               <span style={_S.f18}>{"\u{1F305}"}</span>
               <span style={{fontSize:13,fontWeight:700,color:C.deep}}>Day starts at</span>
-              <HelpBtn title="Day Boundary" body={"How OBubba groups your entries into days:\n\n\u2600\uFE0F Morning wake (recommended). Night feeds after midnight stay with yesterday's bedtime until you log a morning wake. This is what sleep consultants use.\n\n\u{1F55B} Midnight. Simple calendar days. Anything logged after 12:00am midnight appears on the new day. Night wakes at 1am, 3am etc. show on today, not yesterday."}/>
+              <HelpBtn title="Day Boundary" body={"How OBubba groups your entries into days:\n\n\u2600\uFE0F Morning wake (recommended). Night feeds after midnight stay with yesterday's bedtime until you log a morning wake. This keeps overnight logs grouped with the bedtime they belong to.\n\n\u{1F55B} Midnight. Simple calendar days. Anything logged after 12:00am midnight appears on the new day. Night wakes at 1am, 3am etc. show on today, not yesterday."}/>
             </div>
             <div style={{display:"inline-flex",background:"var(--card-bg-alt)",borderRadius:99,border:"1px solid "+C.blush,overflow:"hidden",marginTop:8,marginBottom:8}}>
               <button onClick={()=>{setDayBoundary("wake");haptic();try{trackEvent("setting_changed",{setting:"day_boundary",value:"wake"});}catch{}}} style={{padding:"5px 14px",fontSize:12,fontFamily:_fM,fontWeight:700,border:"none",background:dayBoundary==="wake"?"linear-gradient(135deg,#50a888,#3a8870)":"transparent",color:dayBoundary==="wake"?"white":C.lt,cursor:"pointer",whiteSpace:"nowrap",borderRadius:99}}>{"\u2600\uFE0F"} Morning wake</button>
@@ -42608,7 +42613,7 @@ function App(){
             </div>
             <div style={{fontSize:11,color:C.lt,lineHeight:1.5}}>
               {dayBoundary==="wake"
-                ? "Night feeds belong to bedtime's day. Sleep consultant standard."
+                ? "Night feeds stay grouped with the bedtime they belong to."
                 : "Simple calendar days. 1am entries show on today."}
             </div>
           </div>
@@ -42815,7 +42820,7 @@ function App(){
             </a>
             <div style={{paddingTop:10}}>
               <div style={{fontSize:11,color:C.mid,lineHeight:1.6}}>
-                OBubba is <b>not a medical device</b>. Sleep, feeding & developmental guidance based on NHS, WHO, AAP & AASM <span onTouchEnd={(e)=>{e.preventDefault();const now=Date.now();if(!window._ot)window._ot={c:0,t:0};if(now-window._ot.t>2000)window._ot.c=0;window._ot.c++;window._ot.t=now;if(window._ot.c>=7){window._ot.c=0;try{localStorage.setItem("ob_owner_unlock","zyesha2026");localStorage.setItem("ob_premium","1");localStorage.setItem("obubba_trial_start",new Date().toISOString());}catch{}location.reload();}}} style={{cursor:"default",WebkitUserSelect:"none",userSelect:"none",touchAction:"manipulation"}}>guidelines</span>. Always consult your {_doctor}.
+                OBubba is <b>not a medical device</b>. Sleep, feeding & developmental guidance is based on NHS, WHO, AAP & AASM guidelines. Always consult your {_doctor}.
               </div>
               <div style={{fontSize:10,color:C.lt,marginTop:6}}>Version 1.0 · © {new Date().getFullYear()} OBubba · <a href="https://obubba.com/privacy" target="_blank" style={{color:C.lt}}>Privacy</a> · <a href="https://obubba.com/terms" target="_blank" style={{color:C.lt}}>Terms</a></div>
             </div>
@@ -44022,10 +44027,10 @@ function App(){
         const _bn = babyName || "your little one";
         const _warmMessages = {
           nap_prediction: { title: "Know when " + _bn + " needs sleep", body: "OBubba learns " + _bn + "'s unique rhythm. not just age charts. It's like having a friend who really knows your baby whisper \"now's a good time.\"" },
-          bedtime: { title: "Tonight's perfect bedtime", body: "We look at " + _bn + "'s naps today, their sleep pressure, and what's worked this week. No guessing, no googling. just a clear, confident time." },
+          bedtime: { title: "Tonight's suggested bedtime", body: "We look at " + _bn + "'s naps today, their sleep pressure, and what's worked this week, then suggest a gentle bedtime window you can adjust." },
           crying: { title: "When the crying won't stop", body: "We know how overwhelming it can be. OBubba ranks the most likely causes based on " + _bn + "'s actual patterns. when they last ate, slept, and what usually helps." },
           today_plan: { title: _bn + "'s day, mapped out", body: "A gentle schedule built from " + _bn + "'s own patterns. not a rigid timetable, but a guide that flexes with your day." },
-          sleep_analysis: { title: "Understand " + _bn + "'s sleep", body: "The kind of insight you'd get from a sleep consultant, but based on " + _bn + "'s actual data. patterns, progress, and what might help." },
+          sleep_analysis: { title: "Understand " + _bn + "'s sleep", body: "Gentle, data-led sleep insight based on " + _bn + "'s actual logs: patterns, progress, and what might help next." },
           weekly: { title: "See how far you've come", body: "Some weeks feel endless. But when you look back, the progress is real. You deserve to see you're doing a great job." },
           activities: { title: "Play ideas for right now", body: "Age-perfect activities for exactly where " + _bn + " is developmentally. Each one takes 5 minutes and supports real brain development." },
           tomorrow: { title: "Plan ahead, sleep easier", body: "Tomorrow's predicted schedule so you can plan your day with confidence. You'll know when naps should fall." },
@@ -44037,16 +44042,16 @@ function App(){
           recipes: { title: "Weaning made simple", body: "Age-appropriate recipes and meal ideas, tailored to " + _bn + "'s stage. One less thing to worry about." },
           weaning_stats: { title: "Track the weaning journey", body: "See how " + _bn + "'s milk-to-solid balance is progressing against NHS guidelines." },
           // ── Analyser-suite paywall copy ──
-          nap_analyser: { title: "Why was that nap short?", body: "Most short naps have one of seven causes — undertired, overtired, fell asleep on the feed, cycle skill still developing, fragmented day, catnap by design. OBubba's nap analyser tells you which one and what to try next time." },
-          night_analyser: { title: "Why did last night go that way?", body: "Undertired? Overtired? Hunger? Habit? OBubba reads the shape of last night's wakes and explains exactly what happened, then quietly adjusts tonight's bedtime for you." },
-          feed_analyser: { title: "Is this feeding normal?", body: "Cluster feeding vs growth spurt vs reverse cycling vs supply worry — these look identical from the outside. OBubba's feed analyser looks at " + _bn + "'s 14-day pattern and tells you which one it is." },
-          weaning_analyser: { title: "Is weaning on track?", body: "Iron gaps, allergen overdue, refusal streaks, constipation — the three things that trip most parents up. OBubba watches your weaning log and tells you the one thing to fix this week." },
-          wellbeing_analyser: { title: "How are YOU doing?", body: "OBubba passively tracks your sleep window, mood check-ins, and support signals. When something needs attention, it tells you gently. Safety flags are always free." },
-          triage: { title: "One tap. Whole-baby answer.", body: "Tap this when baby is unsettled and you're not sure why. OBubba runs every analyser in parallel — sleep, feed, weaning, wellbeing — and ranks by urgency. The thing a consultant does in a 30-min call, in 0.3 seconds." },
-          tonights_focus: { title: "Tonight's plan", body: "Every morning, based on last night's diagnosis, OBubba gives you a concrete 4-step plan for tonight. Not advice. A plan. With the reasoning explained so you know why." },
-          sleep_coach: { title: "Your 14-day sleep coach", body: "Pick a style — no-cry, chair shuffle, or parent-led — and OBubba walks you through a 14-day plan one day at a time. The same plan a consultant charges hundreds for, tailored to " + _bn + "'s age and last night's data." },
+          nap_analyser: { title: "Why was that nap short?", body: "Short naps can come from several patterns: undertired, overtired, feed-to-sleep, developing sleep cycles, a fragmented day, or a planned catnap. OBubba helps you spot the most likely pattern and what to try next." },
+          night_analyser: { title: "Why did last night go that way?", body: "Undertired? Overtired? Hunger? Habit? OBubba reads the shape of last night's wakes and explains what the pattern may suggest, then helps you plan tonight gently." },
+          feed_analyser: { title: "Is this feeding normal?", body: "Cluster feeding, growth spurts, reverse cycling, and supply worries can look similar. OBubba looks at " + _bn + "'s recent pattern and highlights what may be going on." },
+          weaning_analyser: { title: "Is weaning on track?", body: "Iron gaps, allergen maintenance, refusal streaks, constipation. OBubba watches your weaning log and suggests one gentle thing to focus on next." },
+          wellbeing_analyser: { title: "How are YOU doing?", body: "OBubba uses your check-ins and logged nights to notice when things may be getting heavy. It responds gently, and safety flags stay free." },
+          triage: { title: "One tap when you're unsure", body: "When baby is unsettled, OBubba checks sleep, feed, weaning, and parent wellbeing signals together, then ranks what may need attention first." },
+          tonights_focus: { title: "Tonight's focus", body: "Based on last night's pattern, OBubba suggests a small, practical focus for tonight, with the reasoning explained so you know why." },
+          sleep_coach: { title: "Your gentle sleep guide", body: "Pick a style — no-cry, chair shuffle, or parent-led — and OBubba walks you through small steps, tailored to " + _bn + "'s age and recent logs." },
         };
-        const _msg = _warmMessages[paywallContext] || { title: "Made by a tired mum, for tired parents", body: "I built OBubba at 3am because I was fed up juggling 5 different apps. Premium gives you a sleep consultant in your pocket. so you can enjoy your baby instead of worrying." };
+        const _msg = _warmMessages[paywallContext] || { title: "Made by a tired mum, for tired parents", body: "I built OBubba at 3am because I was fed up juggling 5 different apps. Premium helps turn your logs into gentle next steps, so you can feel less alone in the messy middle." };
         return (
         <div style={{position:"fixed",inset:0,zIndex:9990,background:"rgba(0,0,0,0.45)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>{try{trackEvent("paywall_dismissed",{via:"backdrop",context:paywallContext||"unknown"});}catch{};setShowPaywall(false);}}>
           <div onClick={e=>e.stopPropagation()} style={{background:"var(--picker-bg,#FFFCF9)",borderRadius:28,padding:"26px 20px 22px",width:"100%",maxWidth:_isTablet?520:380,boxShadow:"0 20px 60px rgba(0,0,0,0.2)",textAlign:"center",position:"relative",maxHeight:"90vh",overflowY:"auto"}}>
@@ -44059,7 +44064,7 @@ function App(){
             <div style={{textAlign:"left",marginBottom:14,padding:"10px 14px",borderRadius:14,background:isDark?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.02)"}}>
               {[
                 ["🌙","Predictions that learn "+_bn+"'s rhythm"],
-                ["📖","Sleep consultant-style guidance"],
+                ["📖","Gentle sleep guidance with clear reasoning"],
                 ["📊","Growth charts & development tracking"],
                 ["👫","Partner sync. always on the same page"],
                 ["💡","\"Why are they crying?\". ranked by data"],
@@ -44119,12 +44124,12 @@ function App(){
                 showToast("Store not available. coming very soon!",2000,1);
               }
             }} style={{width:"100%",padding:"14px",borderRadius:99,border:"none",background:`linear-gradient(135deg,${C.ter},#a85a44)`,color:"white",fontSize:15,fontWeight:700,cursor:_cP,boxShadow:"0 4px 20px rgba(192,112,136,0.25)"}}>
-              {trialActive ? "Start your free trial" : (paywallPlan||"annual")==="lifetime" ? "Get lifetime access" : "Subscribe now"}
+              {trialActive ? "Continue with this plan" : (paywallPlan||"annual")==="lifetime" ? "Get lifetime access" : "Subscribe now"}
             </button>
             {trialActive && <div style={{fontSize:11,color:C.lt,marginTop:6}}>{trialDaysLeft} days free, then cancel anytime</div>}
             {!trialActive && (paywallPlan||"annual")!=="lifetime" && <div style={{fontSize:11,color:C.lt,marginTop:6}}>Cancel anytime. no lock-in</div>}
 
-            <div style={{fontSize:10.5,color:C.mid,marginTop:8,fontStyle:"italic",lineHeight:1.5,maxWidth:280,marginLeft:"auto",marginRight:"auto"}}>Built by a mum who's been there. For less than a coffee a month. give yourself the gift of restful nights.</div>
+            <div style={{fontSize:10.5,color:C.mid,marginTop:8,fontStyle:"italic",lineHeight:1.5,maxWidth:280,marginLeft:"auto",marginRight:"auto"}}>Built by a mum who's been there. Calm guidance for the nights that feel long.</div>
 
             {/* Restore */}
             <button onClick={()=>{
@@ -44463,7 +44468,7 @@ function App(){
                 </div>
                 {_eczema==="severe" && (
                   <div style={{marginTop:8,padding:"8px 10px",borderRadius:10,background:"rgba(212,168,85,0.08)",border:"1px solid rgba(212,168,85,0.25)",fontSize:11,color:C.gold,lineHeight:1.5}}>
-                    Babies with severe eczema are at higher risk. BSACI recommends speaking to your {_doctor} before introducing egg and peanut. OBubba will remind you of this before each allergen.
+                    Babies with severe eczema are at higher risk. BSACI recommends speaking to your {_doctor} before introducing egg and peanut. OBubba can show a gentle reminder before each allergen.
                   </div>
                 )}
               </div>
@@ -44626,7 +44631,7 @@ function App(){
                 {icon:"🥄",text:"Weaning journal. track every food tried"},
                 {icon:"🛡️",text:"Allergen tracker. all 14 allergens with status"},
                 {icon:"😴",text:"2-nap rhythm. wake windows getting longer"},
-                {icon:"🌙",text:"8/9/10 month regression coming. OBubba will flag it"},
+                {icon:"🌙",text:"8/9/10 month sleep changes may appear. OBubba can help you spot the pattern"},
               ].map((item,i)=>(
                 <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"5px 0",fontSize:12,color:C.mid}}>
                   <span style={_S.f16}>{item.icon}</span>{item.text}
@@ -45033,11 +45038,11 @@ Severe: breathing changes, swelling of face/throat, very pale or floppy. please 
           {id:"chair", name:"Chair shuffle", icon:"🪑", source:"Gradual-distance method",
            summary:"You stay in the room with " + _name3 + ", moving your chair further from the cot each night.",
            how:"Night 1-3: sit right next to the cot, offer a reassuring hand. Night 4-6: move the chair halfway across the room. Night 7-10: sit by the door. Night 11-14: outside the door. " + _name3 + " can always see or hear you.",
-           obubba:"OBubba tells you exactly where to sit each night and tracks " + _name3 + "'s settling time. If they need you closer for an extra night, the plan adjusts automatically.",
+           obubba:"OBubba suggests where to sit each night and tracks " + _name3 + "'s settling time. If they need you closer for an extra night, the plan can flex with you.",
            best:"Parents who want to be physically present but help " + _name3 + " learn to settle independently."},
           {id:"parent_led", name:"Parent-led rhythm", icon:"🌿", source:"No formal method",
            summary:"No sleep training at all. Stabilise the environment, keep routines consistent, and let development do the work.",
-           how:"Focus on wake windows, consistent bedtime routine, dark room, and white noise. " + _name3 + "'s sleep will naturally consolidate as their brain matures. OBubba optimises the timing so you're not guessing.",
+           how:"Focus on wake windows, a consistent bedtime routine, a dark room, and white noise. As " + _name3 + " matures, their sleep may gradually consolidate. OBubba helps with timing so you're not guessing.",
            obubba:"OBubba fine-tunes " + _name3 + "'s wake windows and bedtime each day based on actual data. You follow the predictions. no training, no stress, just rhythm.",
            best:"Parents who believe in waiting for developmental readiness, or babies under 5 months."},
         ];
@@ -48799,7 +48804,7 @@ Severe: breathing changes, swelling of face/throat, very pale or floppy. please 
             <div style={{width:48,height:4,background:C.blush,borderRadius:99,margin:"0 auto 16px"}}/>
             <div style={{fontFamily:"Georgia,serif",fontSize:20,marginBottom:4}}>⚙️ Adjust Schedule</div>
             <div style={{fontSize:13,color:C.lt,marginBottom:12,lineHeight:1.5}}>
-              Set your preferred wake and bedtime and OBubba will plan the day around them.
+              Set your preferred wake and bedtime and OBubba will suggest a day rhythm around them.
             </div>
 
             {/* Dynamic personalised schedule preview — updates live as parent changes inputs */}
@@ -48931,7 +48936,7 @@ Severe: breathing changes, swelling of face/throat, very pale or floppy. please 
 
             <div style={{background:"var(--card-bg-alt)",border:`1px solid ${C.mint}22`,borderRadius:12,padding:"10px 12px",marginBottom:14}}>
               <div style={{fontSize:11,color:C.mint,lineHeight:1.5,textAlign:"center"}}>
-                🌿 On days when {babyName||"baby"} doesn't follow the plan, OBubba will automatically adapt — your real-time predictions always reflect what's actually happening, not just the target.
+                🌿 On days when {babyName||"baby"} doesn't follow the plan, OBubba gently adapts — your real-time predictions reflect what's actually happening, not just the target.
               </div>
             </div>
 
