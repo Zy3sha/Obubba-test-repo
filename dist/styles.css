@@ -626,3 +626,245 @@ body.dark-mode .prio-glow {
   .prio-glow,.prio-glow-dark{animation:none}
   button{transition:none!important}
 }
+
+/* ═══════════════════════════════════════════════════════════
+   PREMIUM UI PASS — calmer, more editorial, less glow-heavy
+   Keeps OBubba's soft identity while making the interface feel more deliberate.
+   ═══════════════════════════════════════════════════════════ */
+:root,body,body.light-mode{
+  --bg-solid:#FFFBF7;
+  --card-bg:rgba(255,255,255,0.68);
+  --card-bg-solid:rgba(255,255,255,0.86);
+  --card-bg-alt:rgba(255,250,246,0.78);
+  --card-border:rgba(111,86,79,0.08);
+  --card-shadow:0 1px 1px rgba(91,79,79,0.035),0 10px 28px rgba(132,103,92,0.10),0 28px 72px rgba(192,112,136,0.08),inset 0 1px 0 rgba(255,255,255,0.86);
+  --card-shadow-elevated:0 2px 3px rgba(91,79,79,0.05),0 16px 40px rgba(132,103,92,0.13),0 36px 90px rgba(192,112,136,0.10),inset 0 1px 0 rgba(255,255,255,0.92);
+  --chip-bg:rgba(255,255,255,0.72);
+  --chip-bg-active:rgba(246,221,227,0.64);
+  --nav-bg:rgba(255,251,247,0.86);
+  --nav-border:rgba(111,86,79,0.08);
+  --nav-shadow:0 -1px 0 rgba(111,86,79,0.06),0 -14px 34px rgba(132,103,92,0.10);
+  --glass-blur:18px;
+  --glass-sat:1.35;
+  --sparkle-opacity:0.16;
+}
+
+body.dark-mode{
+  --card-bg:rgba(18,30,52,0.68);
+  --card-bg-solid:rgba(21,34,58,0.88);
+  --card-bg-alt:rgba(24,38,62,0.72);
+  --card-border:rgba(255,214,156,0.13);
+  --card-shadow:0 1px 1px rgba(0,0,0,0.20),0 12px 30px rgba(0,0,0,0.30),inset 0 1px 0 rgba(255,214,156,0.12);
+  --card-shadow-elevated:0 2px 3px rgba(0,0,0,0.22),0 18px 46px rgba(0,0,0,0.36),inset 0 1px 0 rgba(255,214,156,0.16);
+  --sparkle-opacity:0.10;
+}
+
+body::before{
+  background:
+    radial-gradient(ellipse 70% 48% at 14% 8%,rgba(246,221,227,0.24),transparent 66%),
+    radial-gradient(ellipse 55% 42% at 86% 4%,rgba(217,207,243,0.18),transparent 62%),
+    radial-gradient(ellipse 80% 44% at 50% 102%,rgba(245,218,210,0.24),transparent 60%),
+    linear-gradient(180deg,#FFFCF9 0%,#FFF8F2 42%,#F8ECE6 100%);
+}
+
+.glass-card{
+  border:1px solid var(--card-border)!important;
+  border-radius:18px!important;
+  box-shadow:var(--card-shadow)!important;
+}
+.glass-card::before{
+  height:34%;
+  background:linear-gradient(180deg,rgba(255,255,255,0.24) 0%,rgba(255,255,255,0.06) 44%,transparent 100%);
+  opacity:0.72;
+}
+.glass-card::after{opacity:0.35}
+
+body.light-mode .ob-hero,body:not(.dark-mode) .ob-hero{
+  border:1px solid rgba(111,86,79,0.08)!important;
+  border-radius:22px!important;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,0.82) 0%,rgba(255,250,246,0.70) 100%),
+    radial-gradient(ellipse 90% 56% at 50% 0%,rgba(246,221,227,0.32),transparent 58%)!important;
+  box-shadow:var(--card-shadow-elevated)!important;
+}
+body.dark-mode .ob-hero{
+  border:1px solid rgba(255,214,156,0.15)!important;
+  border-radius:22px!important;
+  box-shadow:var(--card-shadow-elevated)!important;
+}
+
+button{
+  border-width:1px!important;
+  box-shadow:0 1px 1px rgba(91,79,79,0.04),0 8px 18px rgba(132,103,92,0.08)!important;
+}
+button[style*="linear-gradient(135deg"]{
+  box-shadow:0 10px 24px rgba(192,112,136,0.20),inset 0 1px 0 rgba(255,255,255,0.22)!important;
+}
+button:active{transform:scale(0.985)!important}
+
+body.light-mode button[style*="card-bg"],
+body:not(.dark-mode) button[style*="card-bg"],
+body.light-mode div[style*="borderRadius"][style*="card-bg"],
+body:not(.dark-mode) div[style*="borderRadius"][style*="card-bg"],
+body.light-mode div[style*="card-bg-solid"][style*="borderRadius"],
+body:not(.dark-mode) div[style*="card-bg-solid"][style*="borderRadius"]{
+  border:1px solid rgba(111,86,79,0.08)!important;
+  box-shadow:0 1px 1px rgba(91,79,79,0.03),0 8px 22px rgba(132,103,92,0.08)!important;
+}
+
+div[style*="position:\"fixed\""][style*="bottom:0"]{
+  background:var(--nav-bg)!important;
+  border-top:1px solid var(--nav-border)!important;
+  box-shadow:var(--nav-shadow)!important;
+  backdrop-filter:blur(22px) saturate(1.2)!important;
+  -webkit-backdrop-filter:blur(22px) saturate(1.2)!important;
+}
+
+div[style*="borderRadius:18"][style*="gap:4"]{
+  background:rgba(255,255,255,0.68)!important;
+  border:1px solid rgba(111,86,79,0.08)!important;
+  box-shadow:0 8px 22px rgba(132,103,92,0.08)!important;
+}
+
+input,select,textarea{
+  border-width:1px!important;
+}
+body.light-mode input[style*="borderRadius"],
+body:not(.dark-mode) input[style*="borderRadius"],
+body.light-mode select[style*="borderRadius"],
+body:not(.dark-mode) select[style*="borderRadius"]{
+  box-shadow:inset 0 1px 2px rgba(91,79,79,0.04)!important;
+}
+
+div[style*="borderRadius:\"24px 24px 0 0\""],div[style*="borderRadius:24px 24px 0 0"]{
+  border-radius:28px 28px 0 0!important;
+}
+body.light-mode div[style*="borderRadius:\"24px 24px 0 0\""],
+body:not(.dark-mode) div[style*="borderRadius:\"24px 24px 0 0\""]{
+  background:rgba(255,252,249,0.96)!important;
+  box-shadow:0 -1px 0 rgba(111,86,79,0.08),0 -18px 60px rgba(132,103,92,0.18)!important;
+}
+
+@keyframes prioGlow{
+  0%,100%{border-color:rgba(192,112,136,0.34);box-shadow:0 12px 30px rgba(192,112,136,0.12),inset 0 1px 0 rgba(255,255,255,0.64)}
+  50%{border-color:rgba(111,168,152,0.34);box-shadow:0 12px 30px rgba(111,168,152,0.12),inset 0 1px 0 rgba(255,255,255,0.64)}
+}
+
+/* ═══════════════════════════════════════════════════════════
+   APPLE-STYLE FROSTED GLASS — final visual direction
+   Translucent iOS-like materials: blur, saturation, hairlines and highlights.
+   ═══════════════════════════════════════════════════════════ */
+:root,body,body.light-mode{
+  --bg-solid:#FFFBF8;
+  --card-bg:rgba(255,255,255,0.38);
+  --card-bg-solid:rgba(255,255,255,0.52);
+  --card-bg-alt:rgba(255,255,255,0.30);
+  --card-border:rgba(255,255,255,0.62);
+  --glass-blur:30px;
+  --glass-sat:1.9;
+  --sparkle-opacity:0.12;
+  --card-shadow:0 1px 0 rgba(255,255,255,0.70) inset,0 -1px 0 rgba(91,79,79,0.04) inset,0 16px 38px rgba(132,103,92,0.13),0 2px 6px rgba(132,103,92,0.06);
+  --card-shadow-elevated:0 1px 0 rgba(255,255,255,0.82) inset,0 -1px 0 rgba(91,79,79,0.05) inset,0 22px 56px rgba(132,103,92,0.16),0 4px 12px rgba(132,103,92,0.08);
+  --nav-bg:rgba(255,251,247,0.56);
+  --sheet-bg:rgba(255,252,249,0.68);
+  --picker-bg:rgba(255,252,249,0.72);
+}
+
+body.dark-mode{
+  --card-bg:rgba(28,42,68,0.42);
+  --card-bg-solid:rgba(31,47,76,0.58);
+  --card-bg-alt:rgba(34,50,80,0.38);
+  --card-border:rgba(255,228,184,0.18);
+  --glass-blur:28px;
+  --glass-sat:1.65;
+  --card-shadow:0 1px 0 rgba(255,228,184,0.13) inset,0 -1px 0 rgba(0,0,0,0.22) inset,0 18px 42px rgba(0,0,0,0.34),0 2px 8px rgba(0,0,0,0.22);
+  --card-shadow-elevated:0 1px 0 rgba(255,228,184,0.18) inset,0 -1px 0 rgba(0,0,0,0.25) inset,0 24px 58px rgba(0,0,0,0.42),0 4px 14px rgba(0,0,0,0.28);
+  --nav-bg:rgba(8,14,28,0.54);
+  --sheet-bg:rgba(12,22,40,0.70);
+  --picker-bg:rgba(12,22,40,0.76);
+}
+
+body::before{
+  background:
+    linear-gradient(150deg,rgba(255,255,255,0.70) 0%,rgba(255,248,242,0.58) 28%,rgba(246,221,227,0.48) 62%,rgba(217,207,243,0.34) 100%),
+    linear-gradient(180deg,#FFFCF9 0%,#FFF8F2 50%,#F4E6DF 100%);
+}
+body.dark-mode::before{
+  background:
+    linear-gradient(150deg,rgba(16,30,55,0.82) 0%,rgba(10,19,36,0.78) 42%,rgba(42,33,55,0.52) 100%),
+    linear-gradient(170deg,#080e1c 0%,#0c1628 48%,#101d35 100%);
+}
+
+.glass-card{
+  background:
+    linear-gradient(180deg,rgba(255,255,255,0.28),rgba(255,255,255,0.10)),
+    var(--card-bg)!important;
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(1.03)!important;
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(1.03)!important;
+  border:1px solid var(--card-border)!important;
+  border-radius:22px!important;
+  box-shadow:var(--card-shadow)!important;
+}
+.glass-card::before{
+  height:50%;
+  opacity:0.78;
+  background:linear-gradient(180deg,rgba(255,255,255,0.46) 0%,rgba(255,255,255,0.13) 50%,transparent 100%);
+  border-radius:inherit;
+}
+.glass-card::after{
+  left:12px;right:12px;bottom:0;height:1px;opacity:0.75;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.72),transparent);
+}
+
+body.light-mode .ob-hero,body:not(.dark-mode) .ob-hero{
+  background:
+    linear-gradient(180deg,rgba(255,255,255,0.44),rgba(255,255,255,0.16)),
+    rgba(255,255,255,0.34)!important;
+  border:1px solid rgba(255,255,255,0.70)!important;
+  border-radius:26px!important;
+  box-shadow:var(--card-shadow-elevated)!important;
+}
+body.dark-mode .ob-hero{
+  background:
+    linear-gradient(180deg,rgba(255,228,184,0.08),rgba(255,255,255,0.02)),
+    rgba(28,42,68,0.46)!important;
+  border:1px solid rgba(255,228,184,0.20)!important;
+  border-radius:26px!important;
+  box-shadow:var(--card-shadow-elevated)!important;
+}
+
+button{
+  backdrop-filter:blur(18px) saturate(1.45)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(1.45)!important;
+  border:1px solid rgba(255,255,255,0.44)!important;
+  box-shadow:0 1px 0 rgba(255,255,255,0.46) inset,0 8px 20px rgba(132,103,92,0.10)!important;
+}
+button[style*="linear-gradient(135deg"]{
+  border:1px solid rgba(255,255,255,0.32)!important;
+  box-shadow:0 1px 0 rgba(255,255,255,0.26) inset,0 12px 28px rgba(192,112,136,0.24)!important;
+}
+
+div[style*="position:\"fixed\""][style*="bottom:0"]{
+  background:linear-gradient(180deg,rgba(255,255,255,0.40),rgba(255,251,247,0.56))!important;
+  backdrop-filter:blur(34px) saturate(1.8)!important;
+  -webkit-backdrop-filter:blur(34px) saturate(1.8)!important;
+  border-top:1px solid rgba(255,255,255,0.56)!important;
+  box-shadow:0 -1px 0 rgba(255,255,255,0.64) inset,0 -18px 48px rgba(132,103,92,0.14)!important;
+}
+
+div[style*="borderRadius:18"][style*="gap:4"]{
+  background:rgba(255,255,255,0.34)!important;
+  backdrop-filter:blur(24px) saturate(1.7)!important;
+  -webkit-backdrop-filter:blur(24px) saturate(1.7)!important;
+  border:1px solid rgba(255,255,255,0.56)!important;
+  box-shadow:0 1px 0 rgba(255,255,255,0.60) inset,0 10px 24px rgba(132,103,92,0.11)!important;
+}
+
+body.light-mode div[style*="borderRadius:\"24px 24px 0 0\""],
+body:not(.dark-mode) div[style*="borderRadius:\"24px 24px 0 0\""]{
+  background:rgba(255,252,249,0.68)!important;
+  backdrop-filter:blur(34px) saturate(1.9)!important;
+  -webkit-backdrop-filter:blur(34px) saturate(1.9)!important;
+  border:1px solid rgba(255,255,255,0.62)!important;
+  box-shadow:0 -1px 0 rgba(255,255,255,0.72) inset,0 -22px 70px rgba(132,103,92,0.20)!important;
+}
