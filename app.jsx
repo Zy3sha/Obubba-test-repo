@@ -35466,46 +35466,63 @@ function App(){
                     try { _enginePred = bedtimePrediction(); } catch { _enginePred = null; }
                   }
                   const _engineSaysBridge = !!(_enginePred && _enginePred.forceBridge);
-                  const gapToBed = bedM - cursor;
+                  const _tickBridgeBedMins = (tickDataRef.current || {}).bedMins;
+                  const _bridgeTargetBed = (typeof _tickBridgeBedMins === "number" && _tickBridgeBedMins > cursor)
+                    ? Math.min(_tickBridgeBedMins, _ageBedCeiling)
+                    : (scheduleOverride && scheduleOverride.bed)
+                      ? Math.min(scheduleOverride.bed, _ageBedCeiling)
+                      : bedM;
+                  const gapToBed = _bridgeTargetBed - cursor;
                   const _localSaysBridge = gapToBed > ww.max + 15;
 
-                  if ((_engineSaysBridge || _localSaysBridge) && napIdx >= expectedTotal) {
-                    // Use engine suggestion if available, else fall back to local math.
-                    const _engBridge = _engineSaysBridge && _enginePred.bridgeSuggestion;
-                    let bridgeStart;
-                    let bridgeDur;
-                    if (_engBridge && _engBridge.start) {
-                      const [_ebh, _ebm] = _engBridge.start.split(":").map(Number);
-                      bridgeStart = _ebh * 60 + _ebm;
-                      bridgeDur = _engBridge.duration || 20;
-                    } else {
-                      bridgeStart = cursor + Math.round(ww.min * 0.8);
-                      bridgeDur = 20;
-                    }
-                    const bridgeEnd = bridgeStart + bridgeDur;
-                    // Sanity: bridge has to start after cursor (can't bridge backward)
-                    // and end at least 30 min before bedtime cap. Also cap at
-                    // 23:30 so a very late plan doesn't schedule a "bridge nap"
-                    // at 2am tomorrow on today's timeline.
+                  if (_engineSaysBridge || _localSaysBridge) {
+                    const _engineBridgeList = _enginePred && Array.isArray(_enginePred.catchUpNaps)
+                      ? _enginePred.catchUpNaps
+                      : (_enginePred && _enginePred.bridgeSuggestion ? [_enginePred.bridgeSuggestion] : []);
                     const _MIDNIGHT_MINUS_30 = 23*60 + 30;
-                    const _safeStart = Math.min(_MIDNIGHT_MINUS_30, Math.max(cursor + 10, bridgeStart));
-                    const _safeEnd = _safeStart + bridgeDur;
-                    if (_safeEnd + 30 < _ageBedCeiling) {
+                    const _minBridgeBedGap = w < 30 ? 60 : 90;
+                    let _bridgesAdded = 0;
+                    while (_bridgesAdded < 4 && (_bridgeTargetBed - cursor > ww.max + 15 || (_engineSaysBridge && _bridgesAdded === 0))) {
+                      const _engBridge = _engineBridgeList[_bridgesAdded];
+                      let bridgeStart;
+                      let bridgeDur;
+                      if (_engBridge && _engBridge.start) {
+                        const [_ebh, _ebm] = _engBridge.start.split(":").map(Number);
+                        bridgeStart = _ebh * 60 + _ebm;
+                        bridgeDur = _engBridge.duration || (w < 22 ? 25 : w < 39 ? 20 : 15);
+                      } else {
+                        bridgeStart = cursor + Math.round(ww.min * 0.8);
+                        bridgeDur = w < 22 ? 25 : w < 39 ? 20 : 15;
+                      }
+                      // Sanity: bridge has to start after cursor (can't bridge backward)
+                      // and leave enough pre-bed space. Also cap at 23:30 so a very
+                      // late plan doesn't schedule a "bridge nap" after midnight.
+                      const _safeStart = Math.min(_MIDNIGHT_MINUS_30, Math.max(cursor + 10, bridgeStart));
+                      const _safeEnd = _safeStart + bridgeDur;
+                      if (_safeEnd + _minBridgeBedGap > _bridgeTargetBed) break;
+                      if (_safeEnd + 30 >= _ageBedCeiling) break;
                       items.push({
                         icon: "\u{1F309}", label: "Bridge nap",
                         time: `${fmt12(mtp(_safeStart))} \u2013 ${fmt12(mtp(_safeEnd))}`,
                         sub: `~${bridgeDur}m bridge nap to reach bedtime comfortably`,
-                        predicted: true, bridge: true, mins: _safeStart
+                        predicted: true, bridge: true, mins: _safeStart,
+                        predictedDur: bridgeDur
                       });
                       hasPredictions = true;
                       cursor = _safeEnd;
-                      // Recalculate bedtime from bridge end. Prefer engine's time
-                      // if it's reasonable (after cursor + 60min), else local.
+                      _bridgesAdded++;
+                    }
+                    if (_bridgesAdded > 0) {
+                      // Recalculate bedtime from the last bridge. Prefer engine's
+                      // time if it is still reachable; otherwise keep the target
+                      // bedtime once bridges have made the gap safe.
                       const _engineBed = _enginePred && _enginePred.time
                         ? (()=>{ const [_eh,_em] = _enginePred.time.split(":").map(Number); return _eh*60+_em; })()
                         : null;
-                      if (_engineBed && _engineBed >= cursor + 60) {
+                      if (_engineBed && _engineBed >= cursor + _minBridgeBedGap) {
                         bedM = _engineBed;
+                      } else if (_bridgeTargetBed >= cursor + _minBridgeBedGap) {
+                        bedM = _bridgeTargetBed;
                       } else {
                         bedM = clampBedtime(cursor + Math.round((ww.min + ww.max) / 2), w);
                       }
