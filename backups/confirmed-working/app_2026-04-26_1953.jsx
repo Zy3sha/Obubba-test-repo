@@ -5254,7 +5254,12 @@ function App(){
         case 'log_feed': openLogPanel("feed"); break;
         case 'log_sleep': openLogPanel("sleep"); break;
         case 'log_nappy': openLogPanel("nappy"); break;
-        case 'start_timer': startBreastTimer("L"); break;
+        case 'start_timer': {
+          // Read from localStorage (not stale closure) to check if timer already running
+          const _ba = localStorage.getItem("breast_active") === "1";
+          if (!_ba) startBreastTimer("L");
+          break;
+        }
         case 'log_temperature': setShowMedForm(true); break;
         case 'log_medicine': setShowMedForm(true); break;
         case 'baby_summary': setTab("insights"); break;
@@ -8016,6 +8021,8 @@ function App(){
   const[breastSec,setBreastSec]=useState(()=>{try{const s=localStorage.getItem("breast_sec");return s?JSON.parse(s):{L:0,R:0};}catch{return {L:0,R:0};}});
   const[breastActive,setBreastActive]=useState(()=>{try{return localStorage.getItem("breast_active")==="1";}catch{return false;}});
   const[breastStartTime,setBreastStartTime]=useState(()=>{try{return localStorage.getItem("breast_startTime")||null;}catch{return null;}});
+  const[showBreastStartPicker,setShowBreastStartPicker]=useState(false);
+  const[breastCustomStart,setBreastCustomStart]=useState("");
   const breastRef=React.useRef(null);
   const[bedCountdown,setBedCountdown]=useState(null);
   const[nightElapsed,setNightElapsed]=useState(null);
@@ -9424,7 +9431,7 @@ function App(){
             // Update the entry in days too
             setDays(d2=>{const existing=d2[todayStr()]||[];return{...d2,[todayStr()]:existing.map(x=>x.carerEntryId===d.id?{...x,start:_e.start}:x)};});
           }
-          if (!_autoMergedIds.has(d.id) && !_e._merged && _e.type && _e.time) {
+          if (!_autoMergedIds.has(d.id) && !_e._merged && !_e._rejected && _e.type && _e.time) {
             _autoMergedIds.add(d.id);
             _pushPersist(d.id);
             // Build the entry for the day log
@@ -9493,7 +9500,8 @@ function App(){
           }
         });
         entries.sort((a,b) => (b.loggedAt||"").localeCompare(a.loggedAt||""));
-        setCarerEntries(entries);
+        // Filter out merged/rejected entries so they don't show in the review badge
+        setCarerEntries(entries.filter(e => !e._merged && !e._rejected));
       }, (err)=>{ console.warn("Carer log listener error:",err); });
     } catch(e) { console.warn("Carer logs not available:",e); }
     return ()=>{ if(carerUnsubRef.current) carerUnsubRef.current(); };
@@ -9516,21 +9524,33 @@ function App(){
     showToast("✓ Added to "+fmtDate(dayKey),2000,1);
   }
 
-  // Reject carer entry. just delete
+  // Reject carer entry. just delete from Firestore + local state
   function rejectCarerEntry(entry) {
-    try {
-      const {db, doc, deleteDoc} = window._fb;
-      deleteDoc(doc(db,"carer_logs",backupCode,"entries",entry.id)).catch(()=>{});
-    } catch(e){}
+    const _code = backupCode || (()=>{try{return localStorage.getItem("backup_code");}catch{return null;}})();
+    if (_code && window._fb) {
+      try {
+        const {db, doc, deleteDoc} = window._fb;
+        deleteDoc(doc(db,"carer_logs",_code,"entries",entry.id)).catch(e=>console.warn("Carer entry delete failed:",e));
+      } catch(e){ console.warn("rejectCarerEntry error:",e); }
+    }
+    // Also mark as merged so the listener doesn't re-add it
+    try { if(_code && window._fb) { const {db,doc,setDoc}=window._fb; setDoc(doc(db,"carer_logs",_code,"entries",entry.id),{_merged:true,_rejected:true},{merge:true}).catch(()=>{}); } } catch{}
     setCarerEntries(prev=>prev.filter(e=>e.id!==entry.id));
-    showToast("Entry removed",1500,0);
+    showToast("Entry dismissed",1500,1);
   }
 
   function endCarerSession() {
-    if (!backupCode || !window._fb) return;
+    const _code = backupCode || (()=>{try{return localStorage.getItem("backup_code");}catch{return null;}})();
+    if (!_code) { showToast("No backup code found. try again after syncing", 2000, 2); return; }
+    if (!window._fb) {
+      // Firebase not ready — wait and retry
+      showToast("Connecting...", 1500, 1);
+      setTimeout(()=>endCarerSession(), 2000);
+      return;
+    }
     try {
       const {db, doc, setDoc, serverTimestamp} = window._fb;
-      setDoc(doc(db, "carer_logs", backupCode, "_meta", "session"), {
+      setDoc(doc(db, "carer_logs", _code, "_meta", "session"), {
         ended: true,
         endedAt: serverTimestamp(),
         endedBy: window._fbUid || "parent"
@@ -9544,10 +9564,11 @@ function App(){
   }
 
   function restartCarerSession() {
-    if (!backupCode || !window._fb) return;
+    const _code = backupCode || (()=>{try{return localStorage.getItem("backup_code");}catch{return null;}})();
+    if (!_code || !window._fb) return;
     try {
       const {db, doc, deleteDoc} = window._fb;
-      deleteDoc(doc(db, "carer_logs", backupCode, "_meta", "session")).then(() => {
+      deleteDoc(doc(db, "carer_logs", _code, "_meta", "session")).then(() => {
         showToast("✓ Carer portal is open again", 2000, 1);
       }).catch(() => {});
     } catch(e) {}
@@ -9871,9 +9892,11 @@ function App(){
       const allKeys = [];
       for (let i = 0; i < localStorage.length; i++) allKeys.push(localStorage.key(i));
       allKeys.forEach(k => {
-        // Keep only device-level prefs that aren't account-specific
+        // Keep device-level prefs + any keys not belonging to OBubba
         const keep = k === "ob_theme" || k === "ob_widget_theme" || k === "ob_locale";
-        if (!keep) { try { localStorage.removeItem(k); } catch {} }
+        // Only clear keys that are known OBubba prefixes or explicit known keys
+        const isOBubba = k.startsWith("ob_") || k.startsWith("obubba") || k.startsWith("nap_") || k.startsWith("bed_") || k.startsWith("breast_") || k.startsWith("timer_") || ["children_v1","active_child","backup_code","family_code","family_username","auth_verified","tut_v2","install_date_v1","onboarded_v2","use_personal_recs_v1","fluid_unit_v1","measure_unit_v1","reminders_v1","appointments_v1","pinned_notes_v1","meds_v1","saved_meds_v1","emergency_contacts_v1","carer_notes_v1","carer_comfort_v1","wellbeing_history_v1","allergen_profile_v1","bio_enabled","last_breast_side","pred_accuracy_v1","_lastWidgetData","_hasBreast"].includes(k);
+        if (!keep && isOBubba) { try { localStorage.removeItem(k); } catch {} }
       });
     } catch {}
 
@@ -13295,6 +13318,13 @@ function App(){
                             Done + back to sleep
                           </button>
                         </div>
+                        <button onClick={()=>{
+                          haptic();
+                          setShowBreastStartPicker(true);
+                          setBreastCustomStart(breastStartTime||nowTime());
+                        }} style={{background:"none",border:"none",color:C.lt,fontSize:10,cursor:_cP,textAlign:"center",width:"100%",marginTop:4,fontFamily:_fI}}>
+                          Started earlier? Tap to edit
+                        </button>
                       </div>
                     );
                   }
@@ -13369,7 +13399,6 @@ function App(){
               })()}
             </div>
           )}
-          <div style={{fontSize:11,color:C.lt,marginTop:8,textAlign:"center",lineHeight:1.5}}>{_nightFeedHint}</div>
           {(()=>{
             const _nwCount = (_nwCtx && _nwCtx.wakeNum) || 0;
             const _isDeepNight = _h >= 23 || _h < 6;
@@ -15227,6 +15256,47 @@ function App(){
           blended = posAvg;
         }
       }
+      // ── Optimal WW from settle-time correlation ──
+      // If we have enough settle-time data, bias the prediction toward the
+      // wake window range that produces the fastest settling (= best naps).
+      // This is the "learn what works for YOUR baby" intelligence.
+      if (_usePersonal) {
+        try {
+          const _optWW = getOptimalWakeWindow();
+          if (_optWW && _optWW.sampleSize >= 10 && _optWW.bestBucket.count >= 3) {
+            const _optMid = (_optWW.optimalMin + _optWW.optimalMax) / 2;
+            // Blend: 70% rhythm-based prediction + 30% settle-time-optimal
+            // This gently steers toward the WW that gives best naps
+            blended = Math.round(blended * 0.7 + _optMid * 0.3);
+          }
+        } catch {}
+        // ── Short-nap diagnosis → WW adjustment ──
+        // If the last nap was diagnosed as undertired/overtired, apply the
+        // recommended shift so the prediction matches the advice text
+        try {
+          if (_todayCompNaps.length > 0) {
+            const _lastCompNap = _todayCompNaps[_todayCompNaps.length - 1];
+            const _priorEntries = entries.filter(e => !e.night && timeVal(e) < timeVal(_lastCompNap)).sort((a,b) => timeVal(a) - timeVal(b));
+            const _napDx = diagnoseNapPattern(_lastCompNap, _priorEntries, ageWeeks, ww);
+            if (_napDx) {
+              if (_napDx.type === "undertired") blended = Math.min(ww.max, blended + 15);
+              else if (_napDx.type === "overtired") blended = Math.max(ww.min, blended - 10);
+            }
+          }
+        } catch {}
+        // ── Growth spurt → relax predictions ──
+        // Auto-detected growth spurts get the same accommodation as teething
+        try {
+          const _todayFeeds = entries.filter(e => (e.type === "feed" || e.feedType) && !e.night);
+          const _todayMl = _todayFeeds.reduce((s, f) => s + (f.amount || 0), 0);
+          const _last7 = Object.keys(days).filter(k => k < selDay).sort().slice(-7);
+          const _avgMl = _last7.length >= 3 ? Math.round(_last7.reduce((s, k) => s + (days[k] || []).filter(e => e.type === "feed" && !e.night).reduce((s2, f) => s2 + (f.amount || 0), 0), 0) / _last7.length) : 0;
+          if (_avgMl > 0 && _todayMl > _avgMl * 1.3) {
+            // Growth spurt detected — shorten WW by 10% (baby needs more sleep)
+            blended = Math.round(blended * 0.9);
+          }
+        } catch {}
+      }
       const floor = _usePersonal ? Math.max(ww.min - 20, 30) : ww.min;
       const clamped = Math.max(floor, Math.min(ww.max + 10, blended));
       wakeWindowMin = Math.max(floor, Math.round(clamped * 0.9));
@@ -15643,11 +15713,38 @@ function App(){
       try { return (_getNightAdjustments(selDay) || {}).bedtimeShiftMin || 0; }
       catch { return 0; }
     })();
+    // ── Best-night bedtime anchor ──
+    // Blend the predicted bedtime with the average bedtime from the baby's
+    // 3 best nights (fewest wakes). This steers toward what actually works.
+    const _bestNightBed = (()=>{
+      try {
+        if (!hasAccess()) return null;
+        const _dk = Object.keys(days).sort().slice(-21);
+        const _scores = [];
+        _dk.forEach(dk => {
+          const ent = days[dk] || [];
+          if (ent.length < 4) return;
+          const bed = ent.find(e => e.type === "sleep" && !e.night && e.time && e.time.includes(":"));
+          if (!bed) return;
+          const nightWakes = ent.filter(e => e.night).length;
+          _scores.push({ bedMins: timeVal(bed), nightWakes });
+        });
+        if (_scores.length < 10) return null;
+        const _best3 = [..._scores].sort((a, b) => a.nightWakes - b.nightWakes).slice(0, 3);
+        return Math.round(_best3.reduce((s, d) => s + d.bedMins, 0) / _best3.length);
+      } catch { return null; }
+    })();
     const _applyNightShift = (result) => {
-      if (!result || !result.time || !_nightShift) return result;
+      if (!result || !result.time) return result;
       try {
         const [_bh, _bm] = result.time.split(":").map(Number);
-        let _mins = _bh * 60 + _bm + _nightShift;
+        let _mins = _bh * 60 + _bm;
+        // Blend with best-night bedtime (80% prediction + 20% best-night)
+        if (_bestNightBed && Math.abs(_mins - _bestNightBed) < 90) {
+          _mins = Math.round(_mins * 0.8 + _bestNightBed * 0.2);
+        }
+        // Apply night diagnosis shift
+        _mins += _nightShift || 0;
         // Clamp to sane bedtime window (17:00 to 23:30) so an aggressive
         // adjustment can't push baby past midnight or before 5pm.
         if (_mins < 17 * 60) _mins = 17 * 60;
@@ -26063,6 +26160,7 @@ function App(){
       const t=nowTime();
       setBreastStartTime(t);
       try{localStorage.setItem("breast_startTime",t);localStorage.setItem("breast_startMs",String(Date.now()));}catch{}
+      // Hint removed — edit option is visible on the timer itself
       // Auto-pause an active nap so the timers don't clash
       if(napOn && !napPaused){
         pauseNap();
@@ -30542,40 +30640,40 @@ function App(){
         <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
         {isHeroStep ? (
-          <div style={{width:"100%",maxWidth:430,minHeight:"100vh",display:"flex",flexDirection:"column",padding:"env(safe-area-inset-top,0px) 7vw env(safe-area-inset-bottom,0px)",position:"relative",overflowY:"auto",overflowX:"hidden",background:_wBg,color:_wInk,overscrollBehavior:"none"}}>
+          <div style={{width:"100%",maxWidth:430,height:"100vh",height:"100dvh",display:"flex",flexDirection:"column",padding:"env(safe-area-inset-top,0px) 7vw env(safe-area-inset-bottom,0px)",position:"relative",overflow:"hidden",background:_wBg,color:_wInk,overscrollBehavior:"none"}}>
             {/* Night stars overlay */}
             {_isNight&&<div style={{position:"absolute",inset:0,pointerEvents:"none",background:"radial-gradient(1px 1px at 18% 22%,rgba(232,200,150,0.5),transparent 50%),radial-gradient(1px 1px at 72% 12%,rgba(232,200,150,0.4),transparent 50%),radial-gradient(1px 1px at 40% 42%,rgba(255,248,240,0.4),transparent 50%),radial-gradient(1.2px 1.2px at 88% 58%,rgba(212,161,180,0.45),transparent 50%),radial-gradient(1px 1px at 22% 78%,rgba(232,200,150,0.35),transparent 50%),radial-gradient(0.8px 0.8px at 60% 28%,rgba(255,255,255,0.5),transparent 50%),radial-gradient(1px 1px at 85% 82%,rgba(232,200,150,0.4),transparent 50%),radial-gradient(0.8px 0.8px at 8% 48%,rgba(212,161,180,0.4),transparent 50%)"}}/>}
             {/* Day subtle grain */}
             {!_isNight&&<div style={{position:"absolute",inset:0,pointerEvents:"none",background:"radial-gradient(circle at 20% 18%,rgba(200,155,90,0.08) 0%,transparent 4%),radial-gradient(circle at 78% 32%,rgba(168,90,112,0.06) 0%,transparent 5%),radial-gradient(circle at 35% 72%,rgba(168,90,112,0.05) 0%,transparent 4%)"}}/>}
 
-            {/* Mascot medallion — scales with viewport height */}
-            <div style={{display:"flex",justifyContent:"center",margin:"1.5vh 0",position:"relative",zIndex:2}}>
-              {_isNight&&<div style={{position:"absolute",inset:-20,left:"50%",width:"38vw",height:"38vw",maxWidth:200,maxHeight:200,transform:"translateX(-50%)",borderRadius:"50%",background:"conic-gradient(from 180deg,transparent 0deg,rgba(232,200,150,0.22) 30deg,transparent 80deg)",filter:"blur(8px)",zIndex:-1}}/>}
-              <div style={{width:"36vw",height:"36vw",maxWidth:186,maxHeight:186,borderRadius:"50%",position:"relative",background:_wMedalBg,boxShadow:_wMedalShadow,display:"grid",placeItems:"center"}}>
+            {/* Mascot medallion — uses vh so it shrinks on small screens */}
+            <div style={{display:"flex",justifyContent:"center",margin:"2vh 0 1vh",position:"relative",zIndex:2,flex:"0 0 auto"}}>
+              {_isNight&&<div style={{position:"absolute",inset:-20,left:"50%",width:"28vh",height:"28vh",maxWidth:200,maxHeight:200,transform:"translateX(-50%)",borderRadius:"50%",background:"conic-gradient(from 180deg,transparent 0deg,rgba(232,200,150,0.22) 30deg,transparent 80deg)",filter:"blur(8px)",zIndex:-1}}/>}
+              <div style={{width:"22vh",height:"22vh",maxWidth:170,maxHeight:170,borderRadius:"50%",position:"relative",background:_wMedalBg,boxShadow:_wMedalShadow,display:"grid",placeItems:"center"}}>
                 <div style={{position:"absolute",inset:-6,borderRadius:"50%",border:`1px solid ${_wGold}`,opacity:_isNight?0.55:0.4,pointerEvents:"none"}}/>
                 <div style={{position:"absolute",inset:-12,borderRadius:"50%",border:`1px solid ${_wGold}`,opacity:_isNight?0.2:0.15,pointerEvents:"none"}}/>
                 <img src="obubba-happy.png" alt="OBubba" style={{width:"80%",height:"80%",objectFit:"contain",filter:_isNight?"drop-shadow(0 8px 24px rgba(232,200,150,0.38))":"drop-shadow(0 8px 18px rgba(60,47,44,0.18))"}} onError={e=>{e.target.style.display="none";}}/>
               </div>
             </div>
 
-            {/* Hero text — font sizes scale with viewport */}
-            <div style={{textAlign:"center",padding:"0 2vw",position:"relative",zIndex:2}}>
-              <div style={{fontFamily:"'Parisienne',cursive",fontSize:"clamp(40px, 14vw, 56px)",lineHeight:0.9,color:_wInk}}><span style={{color:_isNight?_nGold:_dCta2}}>O</span>Bubba</div>
-              <div style={{fontFamily:"Georgia,serif",fontStyle:"italic",fontSize:"clamp(11px, 3.3vw, 14px)",color:_wInk2,marginTop:4}}>parenthood in your pocket</div>
-              <div style={{fontFamily:"Georgia,serif",fontWeight:400,fontSize:"clamp(22px, 7vw, 29px)",lineHeight:1.1,letterSpacing:"-0.015em",color:_wInk,marginTop:"2vh"}}>Take the guesswork out of <em style={{fontStyle:"italic",color:_isNight?_nGold:_dCta2}}>parenting.</em></div>
-              <div style={{fontFamily:"Georgia,serif",fontSize:"clamp(12px, 3.5vw, 14px)",lineHeight:1.55,color:_wInk2,marginTop:"1.5vh",maxWidth:"30ch",marginLeft:"auto",marginRight:"auto"}}>Personalised sleep, feeding and growth guidance that learns your baby's rhythm {"\u2014"} gently.</div>
+            {/* Hero text — all vh-based so it compresses on small screens */}
+            <div style={{textAlign:"center",padding:"0 2vw",position:"relative",zIndex:2,flex:"0 0 auto"}}>
+              <div style={{fontFamily:"'Parisienne',cursive",fontSize:"clamp(36px, 8vh, 56px)",lineHeight:0.9,color:_wInk}}><span style={{color:_isNight?_nGold:_dCta2}}>O</span>Bubba</div>
+              <div style={{fontFamily:"Georgia,serif",fontStyle:"italic",fontSize:"clamp(10px, 1.8vh, 14px)",color:_wInk2,marginTop:"0.5vh"}}>parenthood in your pocket</div>
+              <div style={{fontFamily:"Georgia,serif",fontWeight:400,fontSize:"clamp(20px, 3.8vh, 29px)",lineHeight:1.1,letterSpacing:"-0.015em",color:_wInk,marginTop:"1.5vh"}}>Take the guesswork out of <em style={{fontStyle:"italic",color:_isNight?_nGold:_dCta2}}>parenting.</em></div>
+              <div style={{fontFamily:"Georgia,serif",fontSize:"clamp(11px, 1.8vh, 14px)",lineHeight:1.5,color:_wInk2,marginTop:"1vh",maxWidth:"30ch",marginLeft:"auto",marginRight:"auto"}}>Personalised sleep, feeding and growth guidance that learns your baby's rhythm {"\u2014"} gently.</div>
             </div>
 
-            {/* Signature trust line */}
-            <div style={{margin:"auto 0 0",position:"relative",zIndex:2,padding:"1.5vh 0",borderTop:`1px solid ${_wLine}`,borderBottom:`1px solid ${_wLine}`,textAlign:"center"}}>
-              <div style={{fontWeight:500,fontSize:10,letterSpacing:"0.24em",textTransform:"uppercase",color:_wInk3,marginBottom:4}}>Guided by</div>
-              <div style={{fontFamily:"Georgia,serif",fontStyle:"italic",fontSize:"clamp(12px, 3.8vw, 15px)",lineHeight:1.5,color:_wInk}}><b style={{fontStyle:"normal",fontWeight:500,color:_wAccent}}>NHS</b>, <b style={{fontStyle:"normal",fontWeight:500,color:_wAccent}}>WHO</b> & <b style={{fontStyle:"normal",fontWeight:500,color:_wAccent}}>AASM</b> standards {"\u2014"} never prescriptive, always kind.</div>
+            {/* Signature trust line — pushed to bottom by flex auto margin */}
+            <div style={{margin:"auto 0 0",position:"relative",zIndex:2,padding:"1.2vh 0",borderTop:`1px solid ${_wLine}`,borderBottom:`1px solid ${_wLine}`,textAlign:"center",flex:"0 0 auto"}}>
+              <div style={{fontWeight:500,fontSize:"clamp(8px, 1.4vh, 10px)",letterSpacing:"0.24em",textTransform:"uppercase",color:_wInk3,marginBottom:"0.5vh"}}>Guided by</div>
+              <div style={{fontFamily:"Georgia,serif",fontStyle:"italic",fontSize:"clamp(11px, 2vh, 15px)",lineHeight:1.4,color:_wInk}}><b style={{fontStyle:"normal",fontWeight:500,color:_wAccent}}>NHS</b>, <b style={{fontStyle:"normal",fontWeight:500,color:_wAccent}}>WHO</b> & <b style={{fontStyle:"normal",fontWeight:500,color:_wAccent}}>AASM</b> standards {"\u2014"} never prescriptive, always kind.</div>
             </div>
 
-            {/* CTAs */}
-            <div style={{marginTop:"1.5vh",position:"relative",zIndex:2,paddingBottom:"1.5vh"}}>
-              <button onClick={()=>setObStep(1)} style={{display:"block",width:"100%",padding:17,borderRadius:999,border:_bN,fontWeight:600,fontSize:15,letterSpacing:"0.02em",cursor:_cP,background:`linear-gradient(135deg,${_wCta1} 0%,${_wCta2} 100%)`,color:_wCtaColor,boxShadow:_wCtaShadow,fontFamily:_fI}}>Start tracking <span style={{fontFamily:"Georgia,serif",fontStyle:"italic",marginLeft:6}}>{"\u2192"}</span></button>
-              <button onClick={()=>{setAuthMode("login");setAuthScreen("login");setAuthError("");setAuthPin("");}} style={{display:"block",width:"100%",marginTop:10,padding:17,borderRadius:999,border:_bN,background:"transparent",fontWeight:500,fontSize:15,color:_wInk,boxShadow:_wSecShadow,cursor:_cP,fontFamily:_fI}}>I already have an account</button>
+            {/* CTAs — always visible at bottom */}
+            <div style={{position:"relative",zIndex:2,paddingTop:"1.2vh",paddingBottom:"1.5vh",flex:"0 0 auto"}}>
+              <button onClick={()=>setObStep(1)} style={{display:"block",width:"100%",padding:"clamp(12px, 2.2vh, 17px)",borderRadius:999,border:_bN,fontWeight:600,fontSize:"clamp(13px, 2vh, 15px)",letterSpacing:"0.02em",cursor:_cP,background:`linear-gradient(135deg,${_wCta1} 0%,${_wCta2} 100%)`,color:_wCtaColor,boxShadow:_wCtaShadow,fontFamily:_fI}}>Start tracking <span style={{fontFamily:"Georgia,serif",fontStyle:"italic",marginLeft:6}}>{"\u2192"}</span></button>
+              <button onClick={()=>{setAuthMode("login");setAuthScreen("login");setAuthError("");setAuthPin("");}} style={{display:"block",width:"100%",marginTop:"1vh",padding:"clamp(12px, 2.2vh, 17px)",borderRadius:999,border:_bN,background:"transparent",fontWeight:500,fontSize:"clamp(13px, 2vh, 15px)",color:_wInk,boxShadow:_wSecShadow,cursor:_cP,fontFamily:_fI}}>I already have an account</button>
             </div>
 
           </div>
@@ -31095,6 +31193,9 @@ function App(){
                     ✕
                   </button>
                 </div>
+                <button onClick={()=>{haptic();setShowBreastStartPicker(true);setBreastCustomStart(breastStartTime||nowTime());}} style={{background:"none",border:"none",color:C.lt,fontSize:10,cursor:_cP,textAlign:"center",width:"100%",marginTop:2,fontFamily:_fI}}>
+                  Started earlier? Tap to edit
+                </button>
               </div>
             ) : (
               _hasBreast && (
@@ -32149,7 +32250,7 @@ function App(){
               {!daySubScreen && <div onTouchStart={e=>e.stopPropagation()} onTouchEnd={e=>e.stopPropagation()} style={{display:"flex",flexWrap:"wrap",alignItems:"center",justifyContent:"center",background:"var(--card-bg)",backdropFilter:"blur(var(--glass-blur))",WebkitBackdropFilter:"blur(var(--glass-blur))",border:"1px solid var(--card-border)",borderRadius:18,padding:"10px 6px",marginBottom:12,gap:2,boxShadow:"var(--card-shadow)",position:"relative",zIndex:2}}>
                 {[
                   {emoji:"🍼",label:"Feed",longAction:()=>openLogPanel("feed"),action:()=>{if(breastActive)cancelBreastTimer();(logForAll?quickAddLogForAll:quickAddLog)("feed",{type:"feed",time:nowTime(),feedType:"milk",amount:0,night:false,note:""});}},
-                  {emoji:"🤱",label:"Breast",longAction:()=>openLogPanel("feed"),action:()=>{haptic();startBreastTimer("L");}},
+                  {emoji:"🤱",label:"Breast",longAction:()=>{if(breastActive){openLogPanel("feed");}else{setShowBreastStartPicker(true);setBreastCustomStart(nowTime());}},action:()=>{haptic();startBreastTimer("L");}},
                   {emoji:"💩",label:"Nappy",longAction:()=>openLogPanel("nappy"),action:()=>(logForAll?quickAddLogForAll:quickAddLog)("poop",{type:"poop",time:nowTime(),poopType:"wet",night:false,note:""})},
                   {emoji:"😴",label:napOn?"Stop":"Nap",longAction:napOn?()=>{showConfirm("Discard nap attempt?",(babyName||"Baby")+" didn't actually settle? Discarding won't save any nap minutes, so today's predictions stay clean.",()=>{cancelNap();setConfirmDialog(null);},"Discard");}:()=>{setShowNapStartPicker(true);setNapCustomStart(nowTime());},action:()=>{if(napOn){endNap();}else{startNap();}}},
                   {emoji:"🫙",label:"Pump",longAction:()=>openLogPanel("pump"),action:()=>openLogPanel("pump")},
@@ -32241,6 +32342,33 @@ function App(){
                     <button onClick={()=>setShowNapStartPicker(false)} style={{padding:"10px",borderRadius:"50%",border:"none",background:"var(--card-bg-alt)",color:C.lt,fontSize:14,cursor:_cP}}>✕</button>
                   </div>
                   <div style={{fontSize:11,color:C.lt,fontStyle:"italic",marginTop:6}}>Timer will show elapsed time from this start time</div>
+                </div>
+              )}
+
+              {/* ═══ Breast Backdated Start Picker ═══ */}
+              {showBreastStartPicker && !breastActive && (
+                <div style={{background:"var(--card-bg)",border:"1.5px solid rgba(212,168,85,0.3)",borderRadius:16,padding:"14px 16px",marginBottom:10,animation:"popIn 0.2s ease",boxShadow:"var(--card-shadow)"}}>
+                  <div style={{fontSize:13,fontWeight:700,color:C.deep,marginBottom:8}}>🤱 When did the feed start?</div>
+                  <div style={{fontSize:11,color:C.lt,marginBottom:8}}>Forgot to tap? Pick the time you actually started.</div>
+                  <div style={_S.flexCenter10}>
+                    <TimeInput value={breastCustomStart} onChange={t=>setBreastCustomStart(t)} style={_S.flex1} inputStyle={{fontSize:16,padding:"10px 12px",borderRadius:12,textAlign:"center"}}/>
+                    <button onClick={()=>{
+                      haptic();
+                      const t = breastCustomStart || nowTime();
+                      setBreastStartTime(t);
+                      try{localStorage.setItem("breast_startTime",t);localStorage.setItem("breast_startMs",String(Date.now()));localStorage.setItem("breast_active","1");}catch{}
+                      setBreastActive(true);
+                      setBreastSide("L");
+                      setShowBreastStartPicker(false);
+                      showToast("🤱 Feed started from " + fmt12(t), 1500, 1);
+                      if(_isNative) _laStart({type:'feed',startTime:Date.now(),babyName:babyName||'Baby',side:'left'});
+                      _androidTimerStart({type:'feed',startTime:Date.now(),babyName:babyName||'Baby',side:'left'});
+                    }} style={{padding:"10px 20px",borderRadius:12,border:"none",background:C.gold,color:"white",fontSize:14,fontWeight:700,cursor:_cP}}>Start</button>
+                  </div>
+                  <div style={{display:"flex",gap:8,marginTop:10}}>
+                    <button onClick={()=>{haptic();const t=breastCustomStart||nowTime();setBreastStartTime(t);try{localStorage.setItem("breast_startTime",t);localStorage.setItem("breast_startMs",String(Date.now()));localStorage.setItem("breast_active","1");localStorage.setItem("breast_side","R");}catch{}setBreastActive(true);setBreastSide("R");setShowBreastStartPicker(false);showToast("🤱 Feed started (Right) from "+fmt12(t),1500,1);if(_isNative)_laStart({type:'feed',startTime:Date.now(),babyName:babyName||'Baby',side:'right'});_androidTimerStart({type:'feed',startTime:Date.now(),babyName:babyName||'Baby',side:'right'});}} style={{flex:1,padding:"8px",borderRadius:10,border:`1px solid ${C.gold}40`,background:`${C.gold}08`,color:C.deep,fontSize:12,fontWeight:600,cursor:_cP}}>Start Right side →</button>
+                    <button onClick={()=>setShowBreastStartPicker(false)} style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${C.blush}`,background:"transparent",color:C.lt,fontSize:12,cursor:_cP}}>Cancel</button>
+                  </div>
                 </div>
               )}
 
@@ -42151,7 +42279,7 @@ function App(){
                 <div style={{fontSize:12,fontWeight:700,color:C.deep}}>Share & Sync</div>
                 <div style={{fontSize:10,color:C.lt}}>{familyCode?"Manage":"Connect"}</div>
               </button>
-              <button onClick={()=>{setShowCarerCard(true);restartCarerSession();}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,padding:"14px 8px",borderRadius:14,border:`1px solid ${C.blush}`,background:"var(--card-bg-alt)",cursor:_cP,textAlign:"center"}}>
+              <button onClick={()=>{setShowCarerCard(true);}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,padding:"14px 8px",borderRadius:14,border:`1px solid ${C.blush}`,background:"var(--card-bg-alt)",cursor:_cP,textAlign:"center"}}>
                 <span style={_S.f24}>👩‍🍼</span>
                 <div style={{fontSize:12,fontWeight:700,color:C.deep}}>Bubba Care</div>
                 <div style={{fontSize:10,color:C.lt}}>Share routine</div>
@@ -42231,15 +42359,24 @@ function App(){
             </div>
           )}
 
-          {/* End Carer Session (only if active) */}
+          {/* End / Reopen Carer Session */}
           {backupCode&&(
-            <button onClick={()=>{haptic();showConfirm("End Carer Session","This will lock the Bubba Care. your carer won't be able to log any more entries.",()=>{endCarerSession();setConfirmDialog(null);},"End Session");}} className="glass-card" style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",marginBottom:12,cursor:_cP,textAlign:"left",width:"100%",border:"1.5px solid rgba(224,96,112,0.15)",background:"rgba(224,96,112,0.03)"}}>
-              <span style={_S.f18}>🔒</span>
-              <div style={_S.flex1}>
-                <div style={{fontSize:13,fontWeight:700,color:C.deep}}>End Carer Session</div>
-                <div style={{fontSize:10,color:C.lt}}>Lock the Bubba Care</div>
-              </div>
-            </button>
+            <div style={{display:"flex",gap:8,marginBottom:12}}>
+              <button onClick={()=>{haptic();showConfirm("End Carer Session","This will lock the Bubba Care portal. Your carer won't be able to log any more entries.",()=>{endCarerSession();setConfirmDialog(null);},"End Session");}} className="glass-card" style={{flex:1,display:"flex",alignItems:"center",gap:10,padding:"12px 14px",cursor:_cP,textAlign:"left",border:"1.5px solid rgba(224,96,112,0.15)",background:"rgba(224,96,112,0.03)"}}>
+                <span style={{fontSize:16}}>🔒</span>
+                <div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.deep}}>End Session</div>
+                  <div style={{fontSize:9,color:C.lt}}>Lock portal</div>
+                </div>
+              </button>
+              <button onClick={()=>{haptic();restartCarerSession();}} className="glass-card" style={{flex:1,display:"flex",alignItems:"center",gap:10,padding:"12px 14px",cursor:_cP,textAlign:"left",border:"1.5px solid rgba(155,184,168,0.2)",background:"rgba(155,184,168,0.04)"}}>
+                <span style={{fontSize:16}}>🔓</span>
+                <div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.deep}}>Reopen</div>
+                  <div style={{fontSize:9,color:C.lt}}>Unlock portal</div>
+                </div>
+              </button>
+            </div>
           )}
 
           {/* ═══ 3. PREFERENCES. single glass card ═══ */}
@@ -43089,6 +43226,38 @@ function App(){
         </Sheet>
       )}
 
+      {/* ═══ Breast Timer Edit Sheet ═══ */}
+      {showBreastStartPicker && breastActive && (
+        <Sheet onClose={()=>setShowBreastStartPicker(false)} title="🤱 Edit Feed Start Time">
+          <div>
+            <div style={{fontSize:13,color:C.mid,lineHeight:1.5,marginBottom:12}}>When did you actually start feeding? Pick the time and side.</div>
+            <TimeInput value={breastCustomStart} onChange={t=>setBreastCustomStart(t)} label="Start time" inputStyle={{fontSize:18,padding:"12px",borderRadius:14,textAlign:"center"}}/>
+            <div style={{fontSize:12,fontFamily:_fM,color:C.lt,textTransform:"uppercase",letterSpacing:_ls08,marginBottom:6,marginTop:4}}>Which side?</div>
+            <div style={{display:"flex",gap:10,marginBottom:16}}>
+              {[{s:"L",label:"⬅️ Left"},{s:"R",label:"Right ➡️"}].map(({s,label})=>(
+                <button key={s} onClick={()=>setBreastSide(s)} style={{flex:1,padding:"14px",borderRadius:14,border:breastSide===s?`2px solid ${C.gold}`:`1.5px solid ${C.blush}`,background:breastSide===s?`${C.gold}10`:"transparent",fontSize:15,fontWeight:700,color:breastSide===s?C.gold:C.mid,cursor:_cP}}>{label}</button>
+              ))}
+            </div>
+            <button onClick={()=>{
+              haptic();
+              const t=breastCustomStart||nowTime();
+              if(!t||!t.includes(":")) return;
+              setBreastStartTime(t);
+              try{localStorage.setItem("breast_startTime",t);localStorage.setItem("breast_side",breastSide);}catch{}
+              const [h,m]=t.split(":").map(Number);
+              const now=new Date();
+              let elapsed=Math.max(0,Math.floor((now.getTime()-new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0).getTime())/1000));
+              if(elapsed>86400) elapsed=0;
+              setBreastSec({L:breastSide==="L"?elapsed:0, R:breastSide==="R"?elapsed:0});
+              setShowBreastStartPicker(false);
+              showToast("🤱 Start time updated to "+fmt12(t),1500,1);
+            }} style={{width:"100%",padding:"14px",borderRadius:99,border:"none",background:`linear-gradient(135deg,${C.gold},#C49545)`,color:"white",fontSize:15,fontWeight:700,cursor:_cP}}>
+              Update start time
+            </button>
+          </div>
+        </Sheet>
+      )}
+
       {logPanel==="nappy"&&(
         <Sheet onClose={()=>{setLogPanel(null);setNappyMode(null);setNappyTime("");setSelectedPoopColour("");}} title="💩 Log Nappy">
           <div>
@@ -43871,7 +44040,7 @@ function App(){
         return (
         <div style={{position:"fixed",inset:0,zIndex:9990,background:"rgba(0,0,0,0.45)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>{try{trackEvent("paywall_dismissed",{via:"backdrop",context:paywallContext||"unknown"});}catch{};setShowPaywall(false);}}>
           <div onClick={e=>e.stopPropagation()} style={{background:"var(--picker-bg,#FFFCF9)",borderRadius:28,padding:"26px 20px 22px",width:"100%",maxWidth:_isTablet?520:380,boxShadow:"0 20px 60px rgba(0,0,0,0.2)",textAlign:"center",position:"relative",maxHeight:"90vh",overflowY:"auto"}}>
-            <button onTouchEnd={e=>e.stopPropagation()} onClick={()=>{try{trackEvent("paywall_dismissed",{via:"close_button",context:paywallContext||"unknown"});}catch{};setShowPaywall(false);}} style={{position:"absolute",top:12,right:12,background:"none",border:"none",fontSize:18,color:C.lt,cursor:_cP,zIndex:1}}>✕</button>
+            <button aria-label="Close" onTouchEnd={e=>e.stopPropagation()} onClick={()=>{try{trackEvent("paywall_dismissed",{via:"close_button",context:paywallContext||"unknown"});}catch{};setShowPaywall(false);}} style={{position:"absolute",top:8,right:8,background:"none",border:"none",fontSize:18,color:C.lt,cursor:_cP,zIndex:1,width:44,height:44,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             <div style={{fontSize:32,marginBottom:8}}>💛</div>
             <div style={{fontFamily:"Georgia,serif",fontSize:20,fontWeight:700,color:C.deep,marginBottom:8,lineHeight:1.3}}>{_msg.title}</div>
             <div style={{fontSize:12.5,color:C.mid,lineHeight:1.6,marginBottom:14,maxWidth:300,marginLeft:"auto",marginRight:"auto"}}>{_msg.body}</div>
@@ -44091,9 +44260,9 @@ function App(){
 
       {showSoundMachine&&(
         <div role="dialog" aria-modal="true" onClick={()=>setShowSoundMachine(false)} style={{position:"fixed",inset:0,background:"rgba(20,15,30,0.7)",backdropFilter:"blur(8px)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"0 0 0"}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:"var(--bg-solid)",borderRadius:"24px 24px 0 0",padding:"20px 18px 32px",maxWidth:420,width:"100%",boxShadow:"0 -10px 40px rgba(0,0,0,0.3)",position:"relative"}}>
-            <div style={{position:"absolute",top:16,right:16}}>
-              <button onTouchEnd={e=>e.stopPropagation()} onClick={()=>setShowSoundMachine(false)} style={{width:32,height:32,borderRadius:"50%",border:_bN,background:"var(--card-bg-alt)",color:C.deep,fontSize:16,cursor:_cP,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+          <div onClick={e=>e.stopPropagation()} style={{background:"var(--bg-solid)",borderRadius:"24px 24px 0 0",padding:"20px 18px 32px",maxWidth:420,width:"100%",maxHeight:"88vh",overflowY:"auto",boxShadow:"0 -10px 40px rgba(0,0,0,0.3)",position:"relative"}}>
+            <div style={{position:"absolute",top:16,right:16,zIndex:2}}>
+              <button aria-label="Close sound machine" onTouchEnd={e=>e.stopPropagation()} onClick={()=>setShowSoundMachine(false)} style={{width:44,height:44,borderRadius:"50%",border:_bN,background:"var(--card-bg-alt)",color:C.deep,fontSize:16,cursor:_cP,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             </div>
             <div style={{width:40,height:4,background:C.blush,borderRadius:99,margin:"0 auto 16px"}}/>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
@@ -46146,11 +46315,7 @@ Severe: breathing changes, swelling of face/throat, very pale or floppy. please 
               ))}
               <button onClick={()=>{
                 haptic();
-                const _name2 = prompt("Step name (e.g. 'White noise on')");
-                if (!_name2) return;
-                const _emoji = prompt("Emoji (e.g. 🎵)") || "✨";
-                const _dur = parseInt(prompt("Duration in minutes") || "5") || 5;
-                const _newSteps = [..._steps, {emoji:_emoji, title:_name2, duration:_dur, note:""}];
+                const _newSteps = [..._steps, {emoji:"✨", title:"New step", duration:5, note:"", _editing:true}];
                 setCustomRoutine(_newSteps);
               }} style={{width:"100%",padding:"12px",borderRadius:12,border:`2px dashed ${C.blush}`,background:"transparent",color:C.mid,fontSize:13,fontWeight:600,cursor:_cP,marginBottom:12}}>
                 + Add step

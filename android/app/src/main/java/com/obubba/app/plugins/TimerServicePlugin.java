@@ -106,9 +106,19 @@ public class TimerServicePlugin extends Plugin {
             Intent intent = new Intent(getContext(), TimerService.class);
             intent.setAction(TimerService.ACTION_STOP_PREDICTION);
             boolean stopped = true;
+            boolean timerRunning = getContext()
+                    .getSharedPreferences(TimerService.PREFS_NAME, Context.MODE_PRIVATE)
+                    .getBoolean("running", false);
 
+            // Never use startForegroundService for a stop-only action. If a timer
+            // is still active, ask the running service to clear only the prediction;
+            // otherwise stop the prediction-only service directly.
             try {
-                getContext().startService(intent);
+                if (timerRunning) {
+                    getContext().startService(intent);
+                } else {
+                    getContext().stopService(new Intent(getContext(), TimerService.class));
+                }
             } catch (Exception e) {
                 // Service might not be running, or Android may refuse a background
                 // start. In either case, the prediction is no longer active in JS.
