@@ -31088,7 +31088,7 @@ function App(){
       {/* Hidden photo input for diary/milestones */}
       <input ref={photoInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handlePhotoCapture}/>
       <div
-        style={{background:theme.primary,padding:"6px 10px 10px",paddingTop:"max(6px, env(safe-area-inset-top, 6px))",position:"relative",display:tab==="settings"?"none":"block"}}
+        style={{background:"transparent",padding:"6px 10px 10px",paddingTop:"max(6px, env(safe-area-inset-top, 6px))",position:"relative",display:tab==="settings"?"none":"block"}}
         onTouchStart={handleSwipeStart}
         onTouchEnd={handleSwipeEnd}
       >
