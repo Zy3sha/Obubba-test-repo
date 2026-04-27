@@ -1,0 +1,944 @@
+/* ═══════════════════════════════════════════════════════════
+   OBubba — Powder Pink · Lilac · Cream
+   PERFORMANCE OPTIMIZED — instant theme switching
+   backdrop-filter only on class-based elements
+   ═══════════════════════════════════════════════════════════ */
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html,body{height:100%;overscroll-behavior:none}
+html{background:var(--bg-solid, #FFF8F2)}
+body{font-family:'DM Sans',-apple-system,'SF Pro Display',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{display:none}
+input,select,button{font-family:inherit}
+input::placeholder{opacity:1}
+
+/* ═══ LIGHT MODE ═══ */
+:root,body,body.light-mode{
+  --bg-grad:linear-gradient(135deg,#FFF8F2 0%,#F5E1D8 40%,#F0DDD6 100%);
+  --bg-solid:#FFF8F2;
+  --card-bg:rgba(255,255,255,0.40);
+  --card-bg-solid:rgba(255,255,255,0.60);
+  --card-bg-alt:rgba(255,252,248,0.44);
+  --card-border:rgba(255,255,255,0.50);
+  /* v2 card shadow — deeper warmth + physical lift. Existing glow layers kept,
+     with an added 0 8px 24px drop so cards read as lifted off the background
+     instead of painted onto it. This is the "premium depth" pass. */
+  --card-shadow:0 0 24px rgba(255,255,255,0.65),0 0 48px rgba(245,218,210,0.32),0 0 80px rgba(240,210,200,0.18),0 8px 24px rgba(200,150,130,0.12),inset 0 1.5px 0 rgba(255,255,255,0.85);
+  --card-shadow-elevated:0 0 30px rgba(255,255,255,0.75),0 0 60px rgba(245,218,210,0.40),0 0 96px rgba(240,210,200,0.22),0 12px 32px rgba(200,150,130,0.18),inset 0 2px 0 rgba(255,255,255,0.90);
+  --specular:linear-gradient(105deg,transparent 2%,rgba(255,242,235,0.35) 15%,rgba(255,255,255,0.55) 42%,rgba(255,255,255,0.55) 58%,rgba(250,235,228,0.35) 85%,transparent 98%);
+  --text-deep:#5B4F4F;--text-mid:#7A6B6B;--text-lt:#A89898;
+  --blush:#F0D0C8;--rose:#E8B8B0;--cream:#FFF8F2;--warm:#FFFAF6;
+  --ter:#C07088;--mint:#6fa898;--sky:#7aabc4;--gold:#d4a855;
+  --placeholder:#C8B8B4;
+  --glow-primary:rgba(245,218,210,0.40);--glow-under:rgba(240,210,200,0.25);
+  --sheet-bg:rgba(255,252,248,0.94);--sheet-overlay:rgba(91,79,79,0.35);
+  --nav-bg:rgba(255,252,248,0.65);--nav-border:rgba(255,255,255,0.55);
+  --nav-shadow:0 -2px 20px rgba(245,218,210,0.18);
+  --chip-bg:rgba(255,255,255,0.44);--chip-bg-active:rgba(245,218,210,0.48);
+  --chip-shadow:0 0 16px rgba(255,255,255,0.50),0 0 32px rgba(245,218,210,0.20),0 0 48px rgba(240,210,200,0.10);
+  --chip-shadow-active:0 0 24px rgba(240,208,200,0.38),0 0 48px rgba(245,218,210,0.20);
+  --input-bg:rgba(255,253,248,0.52);--picker-bg:rgba(255,252,248,0.95);
+  --glass-blur:24px;--glass-sat:1.8;--sparkle-opacity:0.40;
+  color-scheme:light;
+}
+
+/* ═══ DARK MODE ═══ */
+body.dark-mode{
+  --bg-grad:linear-gradient(170deg,#080e1c 0%,#0c1628 30%,#101d35 55%,#0c1628 100%);
+  --bg-solid:#080e1c;
+  --card-bg:rgba(18,30,52,0.50);--card-bg-solid:rgba(20,34,58,0.68);
+  --card-bg-alt:rgba(24,38,62,0.48);--card-border:rgba(255,190,90,0.25);
+  /* v2 card shadow (dark mode) — deeper physical lift so cards float above
+     the warm night gradient rather than merging with it. */
+  --card-shadow:0 0 20px rgba(255,180,70,0.16),inset 0 1.5px 0 rgba(255,200,120,0.20),0 6px 18px rgba(0,0,0,0.32),0 16px 40px rgba(0,0,0,0.24);
+  --card-shadow-elevated:0 0 28px rgba(255,180,70,0.22),inset 0 2px 0 rgba(255,200,120,0.26),0 10px 28px rgba(0,0,0,0.38),0 20px 48px rgba(0,0,0,0.28);
+  --specular:linear-gradient(105deg,transparent 2%,rgba(255,190,90,0.10) 15%,rgba(255,210,130,0.22) 42%,rgba(255,220,150,0.24) 58%,rgba(255,190,90,0.10) 85%,transparent 98%);
+  --text-deep:#F0F2F5;--text-mid:#B0BEC9;--text-lt:#7E8FA0;
+  --blush:rgba(255,190,90,0.22);--rose:rgba(255,180,70,0.16);
+  --cream:#080e1c;--warm:#162236;
+  --ter:#d98b72;--mint:#7bc4ad;--sky:#8dbdd5;--gold:#e0b86a;
+  --placeholder:#4a5a72;
+  --glow-primary:rgba(255,180,70,0.35);--glow-under:rgba(255,150,40,0.18);
+  --sheet-bg:rgba(12,22,40,0.94);--sheet-overlay:rgba(0,0,0,0.60);
+  --nav-bg:rgba(8,14,28,0.72);--nav-border:rgba(255,190,90,0.16);
+  --nav-shadow:0 -2px 20px rgba(0,0,0,0.35);
+  --chip-bg:rgba(18,30,52,0.55);--chip-bg-active:rgba(60,45,30,0.55);
+  --chip-shadow:0 0 16px rgba(255,180,70,0.14),0 2px 10px rgba(0,0,0,0.28);
+  --input-bg:rgba(24,38,62,0.60);--picker-bg:rgba(12,22,40,0.94);
+  --glass-blur:22px;--glass-sat:1.5;--sparkle-opacity:0.22;
+  color-scheme:dark;
+}
+
+/* ═══ BACKGROUND — watercolour washes, no transition ═══ */
+body{background:var(--bg-solid);color:var(--text-deep);position:relative;min-height:100vh}
+
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 65% 55% at 15% 10%,rgba(245,218,210,0.35),transparent 70%),
+    radial-gradient(ellipse 50% 45% at 80% 15%,rgba(240,210,200,0.28),transparent 65%),
+    radial-gradient(ellipse 70% 50% at 55% 45%,rgba(255,248,242,0.45),transparent 60%),
+    radial-gradient(ellipse 55% 60% at 25% 70%,rgba(238,215,208,0.25),transparent 65%),
+    radial-gradient(ellipse 60% 45% at 75% 65%,rgba(240,208,200,0.28),transparent 60%),
+    radial-gradient(ellipse 80% 40% at 50% 95%,rgba(245,218,210,0.22),transparent 55%),
+    linear-gradient(135deg,#FFF8F2 0%,#F5E1D8 40%,#F0DDD6 100%);
+}
+body.dark-mode::before{
+  background:
+    radial-gradient(ellipse 65% 55% at 20% 20%,rgba(255,160,60,0.07),transparent 65%),
+    radial-gradient(ellipse 50% 45% at 75% 60%,rgba(255,140,40,0.05),transparent 60%),
+    linear-gradient(170deg,#080e1c 0%,#0c1628 30%,#101d35 55%,#0c1628 100%);
+}
+
+/* Sparkle — reduced count for performance */
+body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opacity:var(--sparkle-opacity);
+  background-image:
+    radial-gradient(1.5px 1.5px at 3% 7%,rgba(245,218,210,0.8),transparent),
+    radial-gradient(1px 1px at 9% 25%,rgba(240,210,200,0.7),transparent),
+    radial-gradient(1.5px 1.5px at 22% 50%,rgba(255,255,255,0.7),transparent),
+    radial-gradient(1px 1px at 30% 15%,rgba(240,208,200,0.55),transparent),
+    radial-gradient(1px 1px at 48% 68%,rgba(238,215,208,0.45),transparent),
+    radial-gradient(1.5px 1.5px at 62% 12%,rgba(245,218,210,0.5),transparent),
+    radial-gradient(1px 1px at 72% 55%,rgba(240,210,200,0.4),transparent),
+    radial-gradient(1px 1px at 88% 32%,rgba(255,255,255,0.5),transparent),
+    radial-gradient(1.5px 1.5px at 95% 75%,rgba(240,208,200,0.35),transparent);
+  background-size:100% 100%}
+body.dark-mode::after{background-image:
+    radial-gradient(1px 1px at 5% 10%,rgba(255,220,160,0.5),transparent),
+    radial-gradient(0.8px 0.8px at 25% 35%,rgba(255,200,140,0.35),transparent),
+    radial-gradient(1px 1px at 50% 55%,rgba(255,220,160,0.3),transparent),
+    radial-gradient(0.8px 0.8px at 75% 25%,rgba(255,200,140,0.25),transparent),
+    radial-gradient(1px 1px at 90% 65%,rgba(255,220,160,0.2),transparent)}
+#root{position:relative;z-index:1}
+
+/* Gender */
+body.boy header,body.boy .gender-accent{background:rgba(234,243,251,0.45)!important}
+body.girl header,body.girl .gender-accent{background:rgba(246,221,227,0.45)!important}
+body.dark-mode.boy header{background:rgba(26,42,61,0.60)!important}
+body.dark-mode.girl header{background:rgba(45,31,42,0.60)!important}
+
+/* ═══════════════════════════════════════════════════════════
+   GLASS CARD — backdrop-filter ONLY here + glass-entry
+   These are the only 2 elements that get GPU blur
+   Everything else uses background + box-shadow only
+   ═══════════════════════════════════════════════════════════ */
+.glass-card{
+  position:relative;overflow:hidden;isolation:isolate;
+  background:var(--card-bg);
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
+  border:1px solid var(--card-border);border-radius:min(22px, 5.5vw);
+  box-shadow:var(--card-shadow);
+  contain:content;
+  transition:box-shadow 0.2s cubic-bezier(0.23,1,0.32,1), border-color 0.2s ease;
+}
+.glass-card::before{content:"";position:absolute;top:0;left:0;right:0;height:48%;pointer-events:none;z-index:3;
+  background:linear-gradient(180deg,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0.05) 40%,transparent 100%);border-radius:22px 22px 0 0;mix-blend-mode:overlay}
+body.dark-mode .glass-card::before{background:linear-gradient(180deg,rgba(255,200,120,0.10) 0%,transparent 100%)}
+.glass-card::after{content:"";position:absolute;bottom:0;left:5%;right:5%;height:1.5px;pointer-events:none;z-index:3;
+  background:linear-gradient(90deg,transparent,rgba(217,207,243,0.18),transparent)}
+body.dark-mode .glass-card::after{background:linear-gradient(90deg,transparent,rgba(255,190,90,0.14),transparent)}
+.glass-card>*{position:relative;z-index:2}
+
+.glass-entry{
+  position:relative;
+  backdrop-filter:blur(16px) saturate(1.5);-webkit-backdrop-filter:blur(16px) saturate(1.5);
+  box-shadow:
+    -4px -4px 6px -5px rgba(217,168,192,0.35),
+    4px 4px 6px -5px rgba(192,160,220,0.25)!important;
+  contain:content;
+}
+body.dark-mode .glass-entry{box-shadow:
+    -4px -4px 6px -5px rgba(255,170,60,0.28),
+    4px 4px 6px -5px rgba(255,150,40,0.20),
+    0 2px 4px rgba(0,0,0,0.18)!important}
+.glass-entry::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;pointer-events:none;z-index:3;background:var(--specular);opacity:0.4}
+
+/* ═══════════════════════════════════════════════════════════
+   TEXT VISIBILITY — hardcoded, always readable, both modes
+   No dependency on variable cascade timing
+   ═══════════════════════════════════════════════════════════ */
+body.light-mode,body:not(.dark-mode){color:#5B4F5F}
+body.dark-mode{color:#F0F2F5}
+body.light-mode .glass-card,body.light-mode .glass-entry,
+body:not(.dark-mode) .glass-card,body:not(.dark-mode) .glass-entry{color:#5B4F5F}
+body.dark-mode .glass-card,body.dark-mode .glass-entry{color:#F0F2F5}
+
+/* Force header text visible in BOTH modes immediately */
+body.light-mode div[style*="fontFamily:\"Georgia"],
+body:not(.dark-mode) div[style*="fontFamily:\"Georgia"]{color:#5B4F5F!important}
+body.dark-mode div[style*="fontFamily:\"Georgia"]{color:#F0F2F5!important}
+
+/* Log entry text — force readable */
+body.light-mode div[data-entry-id],body.light-mode div[data-entry-id] div,body.light-mode div[data-entry-id] span,
+body:not(.dark-mode) div[data-entry-id],body:not(.dark-mode) div[data-entry-id] div,body:not(.dark-mode) div[data-entry-id] span{color:#5B4F5F}
+body.dark-mode div[data-entry-id],body.dark-mode div[data-entry-id] div,body.dark-mode div[data-entry-id] span{color:#F0F2F5}
+div[data-entry-id] div[style*="color"]{opacity:1!important}
+
+/* Stat labels */
+body.light-mode div[style*="textTransform:\"uppercase\""][style*="letterSpacing"],
+body:not(.dark-mode) div[style*="textTransform:\"uppercase\""][style*="letterSpacing"]{color:#7A6B7E!important;opacity:1!important}
+body.dark-mode div[style*="textTransform:\"uppercase\""][style*="letterSpacing"]{color:#B0BEC9!important;opacity:1!important}
+
+/* Dark mode inputs */
+body.dark-mode input,body.dark-mode select,body.dark-mode textarea{background:var(--input-bg)!important;color:#F0F2F5!important;border-color:var(--card-border)!important}
+body.dark-mode input::placeholder{color:#4a5a72!important}
+
+/* ═══════════════════════════════════════════════════════════
+   BUTTONS — no backdrop-filter, just glow shadows
+   ═══════════════════════════════════════════════════════════ */
+button,a,[role="button"]{-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+/* Premium tap feedback: transition on resting state so release animates smoothly */
+button{position:relative!important;overflow:visible!important;transition:transform 160ms cubic-bezier(0.23,1,0.32,1)!important}
+button:active{transform:scale(0.97)!important}
+
+/* ═══ CARD ENTRANCE — subtle fade + rise on mount ═══
+   One motion primitive: cards settle into place rather than appearing.
+   Short (260ms), ease-out, only triggered once per mount. Purposeful, not
+   flashy. Honours prefers-reduced-motion so vestibular-sensitive parents
+   (or anyone fighting nausea at 3am) get instant appearance. */
+@keyframes obCardEnter{
+  from{opacity:0;transform:translateY(6px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.ob-card-enter{animation:obCardEnter 0.26s cubic-bezier(0.22,1,0.36,1) both}
+@media (prefers-reduced-motion: reduce){
+  .ob-card-enter{animation:none}
+}
+
+/* ═══ HERO CARD — the signature surface ═══
+   Upgrades .glass-card with a warm radial wash, thicker rounded corners,
+   and generous padding. Not a different card — a promoted one. Every
+   hero state inherits this automatically since they all pass through
+   className="glass-card" style={{padding:"20px 18px"…}} — we layer .ob-hero
+   on top to make the hero visibly distinct from every other card.
+*/
+body.light-mode .ob-hero, body:not(.dark-mode) .ob-hero{
+  /* Background gradient + shape only. Deliberately does NOT set !important on
+     box-shadow or border — those are animated by .prio-glow when applied, and
+     an !important rule here would kill the colourful glow cycle. For non-glow
+     hero states (sleeping, fallback), .glass-card's base shadow still applies. */
+  background:
+    radial-gradient(ellipse 140% 90% at 50% 0%, rgba(245,218,210,0.55) 0%, transparent 55%),
+    radial-gradient(ellipse 100% 60% at 0% 100%, rgba(255,225,200,0.35) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 60% at 100% 100%, rgba(246,221,227,0.40) 0%, transparent 60%),
+    var(--card-bg) !important;
+  border-radius: 24px !important;
+  padding: 22px 20px !important;
+}
+/* Boost the default hero shadow for heroes WITHOUT prio-glow so they still
+   read as lifted. prio-glow heroes animate their own shadow via keyframes. */
+body.light-mode .ob-hero:not(.prio-glow), body:not(.dark-mode) .ob-hero:not(.prio-glow){
+  border: 1.5px solid rgba(255,230,215,0.65);
+  box-shadow:
+    0 0 32px rgba(255,255,255,0.75),
+    0 0 64px rgba(245,218,210,0.40),
+    0 14px 38px rgba(200,150,130,0.18),
+    inset 0 1.5px 0 rgba(255,255,255,0.90);
+}
+body.dark-mode .ob-hero{
+  background:
+    radial-gradient(ellipse 140% 90% at 50% 0%, rgba(255,180,70,0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 100% 60% at 0% 100%, rgba(255,150,60,0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 60% at 100% 100%, rgba(255,200,120,0.12) 0%, transparent 60%),
+    var(--card-bg) !important;
+  border-radius: 24px !important;
+  padding: 22px 20px !important;
+}
+body.dark-mode .ob-hero:not(.prio-glow){
+  border: 1.5px solid rgba(255,190,90,0.35);
+  box-shadow:
+    0 0 28px rgba(255,180,70,0.18),
+    0 14px 40px rgba(0,0,0,0.32),
+    inset 0 1.5px 0 rgba(255,200,120,0.22);
+}
+
+/* ═══ HERO NUMBER — pulse when the underlying value changes ═══
+   Used around any <span class="ob-hero-num"> that wraps a headline number.
+   Keyed remount (key={value}) re-triggers the animation on change, giving
+   parents a small delight moment when logging a feed updates the card. */
+@keyframes obNumPulse{
+  0%  {transform:scale(1);         text-shadow:0 0 0 rgba(192,112,136,0);}
+  30% {transform:scale(1.10);      text-shadow:0 0 12px rgba(192,112,136,0.35);}
+  60% {transform:scale(0.98);}
+  100%{transform:scale(1);         text-shadow:0 0 0 rgba(192,112,136,0);}
+}
+.ob-hero-num{display:inline-block;animation:obNumPulse 0.6s cubic-bezier(0.34,1.56,0.64,1) both}
+@media (prefers-reduced-motion: reduce){
+  .ob-hero-num{animation:none}
+}
+
+/* The global button{position:relative!important} rule above would otherwise
+   pin buttons to their inline flow. The hero's "?" tour button needs to be
+   absolutely positioned inside the hero (top-right corner), so it opts out
+   via this dedicated class. */
+button.ob-hero-help{position:absolute!important;top:14px!important;right:14px!important}
+
+/* ═══ EDGE GLOW — light concentrated at the border, not filling interior ═══ */
+@keyframes candlePulse{
+  0%,100%{opacity:0.8}
+  50%{opacity:1}
+}
+
+/* Light mode — corner glow: top-left + bottom-right only */
+body.light-mode button,body:not(.dark-mode) button{
+  border:1.5px solid rgba(255,225,235,0.35)!important;
+  box-shadow:
+    -4px -4px 5px -4px rgba(217,168,192,0.40),
+    4px 4px 5px -4px rgba(192,160,220,0.30)!important}
+
+/* Dark mode — corner glow: top-left + bottom-right amber */
+body.dark-mode button{
+  border:1.5px solid rgba(255,190,90,0.25)!important;
+  box-shadow:
+    -4px -4px 5px -4px rgba(255,170,60,0.38),
+    4px 4px 5px -4px rgba(255,150,40,0.28)!important}
+
+/* CTA gradient buttons — corner glow, slightly stronger */
+body.light-mode button[style*="linear-gradient(135deg"],body:not(.dark-mode) button[style*="linear-gradient(135deg"]{
+  box-shadow:
+    -6px -6px 8px -5px rgba(217,168,192,0.45),
+    6px 6px 8px -5px rgba(192,160,220,0.35)!important}
+body.dark-mode button[style*="linear-gradient(135deg"]{
+  box-shadow:
+    -6px -6px 8px -5px rgba(255,170,60,0.42),
+    6px 6px 8px -5px rgba(255,150,40,0.32)!important}
+
+/* Pill buttons — corner glow */
+body.light-mode button[style*="borderRadius:99"],body:not(.dark-mode) button[style*="borderRadius:99"]{
+  box-shadow:
+    -4px -4px 5px -4px rgba(217,168,192,0.38),
+    4px 4px 5px -4px rgba(192,160,220,0.28)!important}
+body.dark-mode button[style*="borderRadius:99"]{
+  box-shadow:
+    -4px -4px 5px -4px rgba(255,170,60,0.35),
+    4px 4px 5px -4px rgba(255,150,40,0.25)!important}
+
+/* Action grid buttons (borderRadius:14 + flexDirection) — tight corner glow */
+body.light-mode button[style*="borderRadius:14"][style*="flexDirection"],
+body:not(.dark-mode) button[style*="borderRadius:14"][style*="flexDirection"]{
+  box-shadow:
+    -5px -5px 6px -5px rgba(217,168,192,0.45),
+    5px 5px 6px -5px rgba(192,160,220,0.35)!important}
+body.dark-mode button[style*="borderRadius:14"][style*="flexDirection"]{
+  box-shadow:
+    -5px -5px 6px -5px rgba(255,170,60,0.40),
+    5px 5px 6px -5px rgba(255,150,40,0.30)!important}
+
+/* Hide fixed toggle (inline in header now) */
+#theme-toggle{display:none!important}
+
+::selection{background:var(--ter);color:white}
+body.dark-mode ::selection{background:rgba(217,139,114,0.4);color:white}
+
+/* ═══════════════════════════════════════════════════════════
+   GRADIENT GLOW HALOS — background only, no blur
+   These give the colored glow WITHOUT GPU-expensive blur
+   ═══════════════════════════════════════════════════════════ */
+
+/* Glass cards — gradient glow */
+body.light-mode .glass-card,body:not(.dark-mode) .glass-card{
+  background:var(--card-bg)!important}
+body.dark-mode .glass-card{
+  background:var(--card-bg)!important}
+
+/* Glass entries */
+body.light-mode .glass-entry,body:not(.dark-mode) .glass-entry{
+  background:var(--card-bg)!important}
+
+/* Entry rows */
+body.light-mode div[data-entry-id],body:not(.dark-mode) div[data-entry-id]{
+  border:1.5px solid rgba(255,225,235,0.38)!important;
+  box-shadow:
+    -4px -4px 6px -5px rgba(217,168,192,0.42),
+    4px 4px 6px -5px rgba(192,160,220,0.32)!important}
+body.dark-mode div[data-entry-id]{
+  border:1.5px solid rgba(255,190,90,0.22)!important;
+  box-shadow:
+    -4px -4px 6px -5px rgba(255,170,60,0.35),
+    4px 4px 6px -5px rgba(255,150,40,0.25),
+    0 2px 4px rgba(0,0,0,0.18)!important}
+div[data-entry-id]::after{content:"";position:absolute;top:0;left:0;right:0;height:40%;background:linear-gradient(180deg,rgba(255,255,255,0.12) 0%,transparent 100%);pointer-events:none;z-index:4;border-radius:inherit}
+body.dark-mode div[data-entry-id]::after{background:linear-gradient(180deg,rgba(255,200,120,0.08) 0%,transparent 100%)}
+
+/* Action grid buttons — no interior fill, edge glow only */
+body.light-mode button[style*="borderRadius:14"][style*="flexDirection"],body:not(.dark-mode) button[style*="borderRadius:14"][style*="flexDirection"]{
+  background:var(--card-bg)!important}
+body.dark-mode button[style*="borderRadius:14"][style*="flexDirection"]{
+  background:var(--card-bg)!important}
+
+/* Stat boxes — no interior fill */
+body.light-mode div[style*="textAlign:\"center\""][style*="borderRadius:16"],body:not(.dark-mode) div[style*="textAlign:\"center\""][style*="borderRadius:16"]{
+  background:var(--card-bg)!important}
+
+/* Quick log row */
+body.light-mode div[style*="borderRadius:18"][style*="gap:4"],body:not(.dark-mode) div[style*="borderRadius:18"][style*="gap:4"]{
+  background:radial-gradient(ellipse 60% 100% at 15% 50%,rgba(246,221,227,0.14),transparent 50%),radial-gradient(ellipse 60% 100% at 85% 50%,rgba(217,207,243,0.12),transparent 50%),var(--card-bg)!important}
+
+/* Alert cards */
+body.light-mode div[style*="borderLeft:\"4px solid\""],body:not(.dark-mode) div[style*="borderLeft:\"4px solid\""]{
+  background:radial-gradient(ellipse 60% 100% at 0% 50%,rgba(246,221,227,0.14),transparent 45%),var(--card-bg)!important}
+body.light-mode div[style*="borderLeft:\"3px solid\""],body:not(.dark-mode) div[style*="borderLeft:\"3px solid\""]{
+  background:radial-gradient(ellipse 60% 100% at 0% 50%,rgba(217,207,243,0.12),transparent 40%),var(--card-bg)!important}
+
+/* Nav bar — no blur, just bg */
+body.light-mode div[style*="position:\"fixed\""][style*="bottom:0"],body:not(.dark-mode) div[style*="position:\"fixed\""][style*="bottom:0"]{
+  background:radial-gradient(ellipse 50% 100% at 50% 0%,rgba(245,218,210,0.12),transparent 60%),rgba(255,252,248,0.88)!important;
+  box-shadow:0 -4px 24px rgba(245,218,210,0.18),0 -8px 48px rgba(240,210,200,0.08)!important}
+
+/* Nav bar buttons — subtle glow allowed since buttons are spaced */
+div[style*="position:\"fixed\""][style*="bottom:0"] button,
+div[style*="position:\"fixed\""][style*="bottom:0"] button[style]{
+  box-shadow:none!important;border:none!important;border-color:transparent!important;background-image:none!important;animation:none!important}
+
+/* Quick log bar buttons — completely clean */
+div[style*="borderRadius:18"][style*="gap:4"] button,
+div[style*="borderRadius:18"][style*="gap:4"] button[style]{
+  box-shadow:none!important;border:none!important;border-color:transparent!important;background-image:none!important;animation:none!important}
+
+/* Sheets / Modals — these DO get blur since they're overlay */
+div[style*="borderRadius:\"24px 24px 0 0\""],div[style*="borderRadius:24px 24px 0 0"]{
+  backdrop-filter:blur(30px) saturate(1.6);-webkit-backdrop-filter:blur(30px) saturate(1.6)}
+body.light-mode div[style*="borderRadius:\"24px 24px 0 0\""],body:not(.dark-mode) div[style*="borderRadius:\"24px 24px 0 0\""]{
+  background:radial-gradient(ellipse 80% 40% at 50% 0%,rgba(246,221,227,0.18),transparent 55%),rgba(255,252,250,0.92)!important;
+  box-shadow:0 -8px 40px rgba(246,221,227,0.25),0 -12px 64px rgba(217,207,243,0.15),inset 0 1px 0 rgba(255,255,255,0.70)!important}
+body.dark-mode div[style*="borderRadius:\"24px 24px 0 0\""]{
+  background:rgba(14,22,42,0.92)!important;box-shadow:0 -8px 40px rgba(0,0,0,0.40),inset 0 1px 0 rgba(255,200,120,0.16),0 0 30px rgba(255,180,70,0.08)!important}
+
+/* Collapsible sections */
+body.light-mode div[style*="borderRadius:\"0 0 16px 16px\""],body:not(.dark-mode) div[style*="borderRadius:\"0 0 16px 16px\""]{
+  background:radial-gradient(ellipse 80% 40% at 50% 100%,rgba(217,207,243,0.12),transparent 50%),var(--card-bg-solid)!important}
+
+/* Personal/NHS toggle */
+body.light-mode div[style*="display:\"inline-flex\""][style*="borderRadius:99"],body:not(.dark-mode) div[style*="display:\"inline-flex\""][style*="borderRadius:99"]{
+  background:rgba(255,255,255,0.40)!important;border-color:rgba(255,255,255,0.45)!important;
+  box-shadow:0 0 18px rgba(255,255,255,0.55),0 0 36px rgba(246,221,227,0.25),0 0 52px rgba(217,207,243,0.12)!important}
+
+/* PIN pad — no blur */
+/* Grid children — corner glow, tight to prevent bleed */
+body.light-mode div[style*="gridTemplateColumns:\"1fr 1fr 1fr\""] button,
+body:not(.dark-mode) div[style*="gridTemplateColumns:\"1fr 1fr 1fr\""] button{
+  box-shadow:
+    -4px -4px 5px -5px rgba(217,168,192,0.45),
+    4px 4px 5px -5px rgba(192,160,220,0.35)!important;
+  background:var(--card-bg-solid)!important}
+body.dark-mode div[style*="gridTemplateColumns:\"1fr 1fr 1fr\""] button{
+  box-shadow:
+    -4px -4px 5px -5px rgba(255,170,60,0.40),
+    4px 4px 5px -5px rgba(255,150,40,0.30)!important}
+
+/* Stats grid (4-column) — corner glow */
+body.light-mode div[style*="gridTemplateColumns:\"1fr 1fr 1fr 1fr\""]>div,
+body:not(.dark-mode) div[style*="gridTemplateColumns:\"1fr 1fr 1fr 1fr\""]>div{
+  box-shadow:
+    -4px -4px 5px -5px rgba(217,168,192,0.42),
+    4px 4px 5px -5px rgba(192,160,220,0.32)!important}
+body.dark-mode div[style*="gridTemplateColumns:\"1fr 1fr 1fr 1fr\""]>div{
+  box-shadow:
+    -4px -4px 5px -5px rgba(255,170,60,0.38),
+    4px 4px 5px -5px rgba(255,150,40,0.28)!important}
+
+/* Tutorial / Forgot PIN — blur only on overlay */
+div[style*="animation:\"tutPop"]{backdrop-filter:blur(30px) saturate(1.6);-webkit-backdrop-filter:blur(30px) saturate(1.6)}
+body.light-mode div[style*="animation:\"tutPop"],body:not(.dark-mode) div[style*="animation:\"tutPop"]{
+  box-shadow:0 0 30px rgba(255,255,255,0.65),0 0 56px rgba(246,221,227,0.35),0 0 84px rgba(217,207,243,0.22),0 28px 72px rgba(207,195,236,0.18)!important}
+div[style*="borderRadius:24"][style*="maxWidth:340"]{backdrop-filter:blur(30px) saturate(1.6);-webkit-backdrop-filter:blur(30px) saturate(1.6)}
+
+/* ═══ WELCOME PAGE ═══ */
+
+/* Hero image */
+div[style*="borderRadius:36"][style*="overflow:\"hidden\""][style*="animation"]{border:2px solid rgba(255,255,255,0.50)!important}
+body.light-mode div[style*="borderRadius:36"][style*="overflow:\"hidden\""][style*="animation"],body:not(.dark-mode) div[style*="borderRadius:36"][style*="overflow:\"hidden\""][style*="animation"]{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.85),0 0 28px rgba(255,255,255,0.60),0 0 56px rgba(246,221,227,0.38),0 0 84px rgba(217,207,243,0.24),0 24px 52px rgba(207,195,236,0.18)!important}
+body.dark-mode div[style*="borderRadius:36"][style*="overflow:\"hidden\""][style*="animation"]{
+  box-shadow:inset 0 1px 0 rgba(255,200,120,0.20),0 0 44px rgba(255,180,70,0.22),0 0 80px rgba(255,155,45,0.12),0 24px 52px rgba(0,0,0,0.30)!important;border-color:rgba(255,190,90,0.30)!important}
+
+/* Get Started — yellow/orange glow */
+body.light-mode button[style*="borderRadius:18"][style*="padding:\"19px\""],body:not(.dark-mode) button[style*="borderRadius:18"][style*="padding:\"19px\""]{
+  box-shadow:
+    -8px -8px 12px -7px rgba(217,168,192,0.55),
+    8px 8px 12px -7px rgba(192,160,220,0.45)!important}
+body.dark-mode button[style*="borderRadius:18"][style*="padding:\"19px\""]{
+  box-shadow:
+    -8px -8px 12px -7px rgba(255,170,60,0.50),
+    8px 8px 12px -7px rgba(255,150,40,0.40)!important}
+
+/* Feature pills */
+body.light-mode div[style*="borderRadius:99"][style*="padding:\"7px 13px\""],body:not(.dark-mode) div[style*="borderRadius:99"][style*="padding:\"7px 13px\""]{
+  background:radial-gradient(ellipse 120% 160% at 50% 40%,rgba(246,221,227,0.22),transparent 60%),var(--card-bg-solid)!important;
+  box-shadow:0 0 16px rgba(255,255,255,0.55),0 0 32px rgba(246,221,227,0.25),0 0 48px rgba(217,207,243,0.12),inset 0 1px 0 rgba(255,255,255,0.60)!important}
+
+/* Onboarding step card */
+body.light-mode div[style*="borderRadius:22"][style*="padding:\"22px 18px\""],body:not(.dark-mode) div[style*="borderRadius:22"][style*="padding:\"22px 18px\""]{
+  background:radial-gradient(ellipse 100% 60% at 50% 5%,rgba(246,221,227,0.26),transparent 50%),var(--card-bg-solid)!important;
+  box-shadow:0 0 24px rgba(255,255,255,0.60),0 0 48px rgba(246,221,227,0.30),0 0 72px rgba(217,207,243,0.16),inset 0 1.5px 0 rgba(255,255,255,0.70)!important}
+
+/* Choice buttons */
+body.light-mode button[style*="borderRadius:16"][style*="padding:\"18px\""],body:not(.dark-mode) button[style*="borderRadius:16"][style*="padding:\"18px\""]{
+  box-shadow:0 0 20px rgba(255,255,255,0.55),0 0 40px rgba(246,221,227,0.25),0 0 60px rgba(217,207,243,0.14),inset 0 1px 0 rgba(255,255,255,0.50)!important}
+
+/* Oliver images */
+img[style*="borderRadius:20"][style*="width:100"]{box-shadow:0 0 20px rgba(255,255,255,0.5),0 0 40px rgba(246,221,227,0.25)!important}
+
+/* ═══ NO TRANSITIONS on glass elements — instant theme swap ═══ */
+
+/* ═══════════════════════════════════════════════════════════
+   BULLETPROOF THEME TEXT — visible during React re-render gap
+   These use var() so they respond INSTANTLY to class change
+   ═══════════════════════════════════════════════════════════ */
+
+/* Force ALL text to use CSS vars (instant, no React dependency) */
+
+/* Restore specific colored elements */
+body.light-mode button[style*="color:\"white\""] *,
+body.light-mode button[style*="color:\"white\""],
+body:not(.dark-mode) button[style*="color:\"white\""] *,
+body:not(.dark-mode) button[style*="color:\"white\""],
+body.dark-mode button[style*="color:\"white\""] *,
+body.dark-mode button[style*="color:\"white\""]{color:white!important}
+
+/* Stat numbers keep their accent colors */
+div[style*="fontFamily:\"Georgia"] div[style*="color"]{color:inherit}
+
+/* Header background instant */
+body.light-mode [style*="backdropFilter"]{background-color:rgba(255,252,250,0.30)}
+body.dark-mode [style*="backdropFilter"]{background-color:rgba(8,14,28,0.30)}
+
+/* ═══════════════════════════════════════════════════════════
+   UNIVERSAL GLOW — every rounded element with card-bg
+   ═══════════════════════════════════════════════════════════ */
+
+/* All elements with inline border-radius and card-bg get edge glow */
+body.light-mode div[style*="borderRadius"][style*="card-bg"],
+body:not(.dark-mode) div[style*="borderRadius"][style*="card-bg"]{
+  border:1.5px solid rgba(255,225,235,0.40)!important;
+  box-shadow:
+    -5px -5px 7px -5px rgba(217,168,192,0.45),
+    5px 5px 7px -5px rgba(192,160,220,0.35)!important}
+body.dark-mode div[style*="borderRadius"][style*="card-bg"]{
+  border:1.5px solid rgba(255,190,90,0.25)!important;
+  box-shadow:
+    -5px -5px 7px -5px rgba(255,170,60,0.38),
+    5px 5px 7px -5px rgba(255,150,40,0.28)!important}
+
+/* All elements with chip-bg */
+body.light-mode div[style*="borderRadius"][style*="chip-bg"],
+body:not(.dark-mode) div[style*="borderRadius"][style*="chip-bg"]{
+  border:1px solid rgba(255,225,235,0.35)!important;
+  box-shadow:
+    -3px -3px 5px -4px rgba(217,168,192,0.38),
+    3px 3px 5px -4px rgba(192,160,220,0.28)!important}
+
+/* Buttons with card-bg */
+body.light-mode button[style*="card-bg"],body:not(.dark-mode) button[style*="card-bg"]{
+  border:1.5px solid rgba(255,225,235,0.42)!important;
+  box-shadow:
+    -5px -5px 7px -5px rgba(217,168,192,0.48),
+    5px 5px 7px -5px rgba(192,160,220,0.38)!important}
+body.dark-mode button[style*="card-bg"]{
+  border:1.5px solid rgba(255,190,90,0.28)!important;
+  box-shadow:
+    -5px -5px 7px -5px rgba(255,170,60,0.42),
+    5px 5px 7px -5px rgba(255,150,40,0.32)!important}
+
+/* All solid-bg elements */
+body.light-mode div[style*="card-bg-solid"][style*="borderRadius"],
+body:not(.dark-mode) div[style*="card-bg-solid"][style*="borderRadius"]{
+  border:1.5px solid rgba(255,225,235,0.38)!important;
+  box-shadow:
+    -5px -5px 7px -5px rgba(217,168,192,0.40),
+    5px 5px 7px -5px rgba(192,160,220,0.30)!important}
+
+/* Header bar itself */
+body.light-mode div[style*="backdropFilter"][style*="borderBottom"],
+body:not(.dark-mode) div[style*="backdropFilter"][style*="borderBottom"]{
+  box-shadow:0 4px 20px rgba(246,221,227,0.25),0 8px 40px rgba(217,207,243,0.12)!important}
+body.dark-mode div[style*="backdropFilter"][style*="borderBottom"]{
+  box-shadow:0 4px 20px rgba(0,0,0,0.30),0 8px 40px rgba(255,180,70,0.08)!important}
+
+/* Input fields */
+body.light-mode input[style*="borderRadius"],body:not(.dark-mode) input[style*="borderRadius"],
+body.light-mode select[style*="borderRadius"],body:not(.dark-mode) select[style*="borderRadius"]{
+  box-shadow:0 0 12px rgba(255,255,255,0.35),0 0 24px rgba(246,221,227,0.15),inset 0 1px 2px rgba(217,207,243,0.08)!important}
+body.dark-mode input[style*="borderRadius"],body.dark-mode select[style*="borderRadius"]{
+  box-shadow:0 0 10px rgba(255,180,70,0.10),inset 0 0 12px rgba(255,190,90,0.06),inset 0 1px 2px rgba(0,0,0,0.15)!important}
+
+/* ═══ Priority notification glow — Apple-style shifting colors ═══ */
+@keyframes prioGlow {
+  0%   { border-color: rgba(201,112,90,0.6);  box-shadow: 0 0 18px rgba(201,112,90,0.25), 0 0 4px rgba(201,112,90,0.15) inset; }
+  25%  { border-color: rgba(212,168,85,0.6);   box-shadow: 0 0 18px rgba(212,168,85,0.25), 0 0 4px rgba(212,168,85,0.15) inset; }
+  50%  { border-color: rgba(152,120,208,0.6);  box-shadow: 0 0 18px rgba(152,120,208,0.25), 0 0 4px rgba(152,120,208,0.15) inset; }
+  75%  { border-color: rgba(122,171,196,0.6);  box-shadow: 0 0 18px rgba(122,171,196,0.25), 0 0 4px rgba(122,171,196,0.15) inset; }
+  100% { border-color: rgba(201,112,90,0.6);   box-shadow: 0 0 18px rgba(201,112,90,0.25), 0 0 4px rgba(201,112,90,0.15) inset; }
+}
+@keyframes prioGlowDark {
+  0%   { border-color: rgba(201,112,90,0.5);  box-shadow: 0 0 24px rgba(201,112,90,0.2), 0 0 6px rgba(201,112,90,0.12) inset; }
+  25%  { border-color: rgba(212,168,85,0.5);   box-shadow: 0 0 24px rgba(212,168,85,0.2), 0 0 6px rgba(212,168,85,0.12) inset; }
+  50%  { border-color: rgba(152,120,208,0.5);  box-shadow: 0 0 24px rgba(152,120,208,0.2), 0 0 6px rgba(152,120,208,0.12) inset; }
+  75%  { border-color: rgba(80,168,136,0.5);   box-shadow: 0 0 24px rgba(80,168,136,0.2), 0 0 6px rgba(80,168,136,0.12) inset; }
+  100% { border-color: rgba(201,112,90,0.5);   box-shadow: 0 0 24px rgba(201,112,90,0.2), 0 0 6px rgba(201,112,90,0.12) inset; }
+}
+.prio-glow {
+  animation: prioGlow 6s ease-in-out infinite;
+  border: 2px solid transparent;
+  border-radius: 16px;
+}
+body.dark-mode .prio-glow {
+  animation: prioGlowDark 6s ease-in-out infinite;
+}
+
+/* ═══ PREMIUM POLISH — Apple-style sheet, toast, transitions ═══ */
+
+/* Sheet slide-up entrance */
+@keyframes sheetSlideUp{
+  from{transform:translateY(100%);opacity:0.8}
+  to{transform:translateY(0);opacity:1}
+}
+@keyframes overlayFadeIn{
+  from{opacity:0}
+  to{opacity:1}
+}
+.ob-sheet-overlay{animation:overlayFadeIn 0.2s ease both}
+.ob-sheet-content{animation:sheetSlideUp 0.28s cubic-bezier(0.23,1,0.32,1) both}
+
+/* Toast entrance + exit */
+@keyframes toastEnter{
+  from{opacity:0;transform:translateY(12px) scale(0.96)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+@keyframes toastExit{
+  from{opacity:1;transform:translateY(0) scale(1)}
+  to{opacity:0;transform:translateY(8px) scale(0.97)}
+}
+.ob-toast-enter{animation:toastEnter 0.22s cubic-bezier(0.23,1,0.32,1) both}
+.ob-toast-exit{animation:toastExit 0.18s cubic-bezier(0.4,0,1,1) both}
+
+/* Card stagger — cascading reveal */
+.ob-card-enter:nth-child(2){animation-delay:40ms}
+.ob-card-enter:nth-child(3){animation-delay:80ms}
+.ob-card-enter:nth-child(4){animation-delay:120ms}
+.ob-card-enter:nth-child(5){animation-delay:160ms}
+
+/* Reduced motion — respect user preference for ALL animations */
+@media(prefers-reduced-motion:reduce){
+  .ob-sheet-content{animation:none}
+  .ob-sheet-overlay{animation:none}
+  .ob-toast-enter,.ob-toast-exit{animation:none}
+  .prio-glow,.prio-glow-dark{animation:none}
+  button{transition:none!important}
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PREMIUM UI PASS — calmer, more editorial, less glow-heavy
+   Keeps OBubba's soft identity while making the interface feel more deliberate.
+   ═══════════════════════════════════════════════════════════ */
+:root,body,body.light-mode{
+  --bg-solid:#FFFBF7;
+  --card-bg:rgba(255,255,255,0.68);
+  --card-bg-solid:rgba(255,255,255,0.86);
+  --card-bg-alt:rgba(255,250,246,0.78);
+  --card-border:rgba(111,86,79,0.08);
+  --card-shadow:0 1px 1px rgba(91,79,79,0.035),0 10px 28px rgba(132,103,92,0.10),0 28px 72px rgba(192,112,136,0.08),inset 0 1px 0 rgba(255,255,255,0.86);
+  --card-shadow-elevated:0 2px 3px rgba(91,79,79,0.05),0 16px 40px rgba(132,103,92,0.13),0 36px 90px rgba(192,112,136,0.10),inset 0 1px 0 rgba(255,255,255,0.92);
+  --chip-bg:rgba(255,255,255,0.72);
+  --chip-bg-active:rgba(246,221,227,0.64);
+  --nav-bg:rgba(255,251,247,0.86);
+  --nav-border:rgba(111,86,79,0.08);
+  --nav-shadow:0 -1px 0 rgba(111,86,79,0.06),0 -14px 34px rgba(132,103,92,0.10);
+  --glass-blur:18px;
+  --glass-sat:1.35;
+  --sparkle-opacity:0.16;
+}
+
+body.dark-mode{
+  --card-bg:rgba(18,30,52,0.68);
+  --card-bg-solid:rgba(21,34,58,0.88);
+  --card-bg-alt:rgba(24,38,62,0.72);
+  --card-border:rgba(255,214,156,0.13);
+  --card-shadow:0 1px 1px rgba(0,0,0,0.20),0 12px 30px rgba(0,0,0,0.30),inset 0 1px 0 rgba(255,214,156,0.12);
+  --card-shadow-elevated:0 2px 3px rgba(0,0,0,0.22),0 18px 46px rgba(0,0,0,0.36),inset 0 1px 0 rgba(255,214,156,0.16);
+  --sparkle-opacity:0.10;
+}
+
+body::before{
+  background:
+    radial-gradient(ellipse 70% 48% at 14% 8%,rgba(246,221,227,0.24),transparent 66%),
+    radial-gradient(ellipse 55% 42% at 86% 4%,rgba(217,207,243,0.18),transparent 62%),
+    radial-gradient(ellipse 80% 44% at 50% 102%,rgba(245,218,210,0.24),transparent 60%),
+    linear-gradient(180deg,#FFFCF9 0%,#FFF8F2 42%,#F8ECE6 100%);
+}
+
+.glass-card{
+  border:1px solid var(--card-border)!important;
+  border-radius:18px!important;
+  box-shadow:var(--card-shadow)!important;
+}
+.glass-card::before{
+  height:34%;
+  background:linear-gradient(180deg,rgba(255,255,255,0.24) 0%,rgba(255,255,255,0.06) 44%,transparent 100%);
+  opacity:0.72;
+}
+.glass-card::after{opacity:0.35}
+
+body.light-mode .ob-hero,body:not(.dark-mode) .ob-hero{
+  border:1px solid rgba(111,86,79,0.08)!important;
+  border-radius:22px!important;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,0.82) 0%,rgba(255,250,246,0.70) 100%),
+    radial-gradient(ellipse 90% 56% at 50% 0%,rgba(246,221,227,0.32),transparent 58%)!important;
+  box-shadow:var(--card-shadow-elevated)!important;
+}
+body.dark-mode .ob-hero{
+  border:1px solid rgba(255,214,156,0.15)!important;
+  border-radius:22px!important;
+  box-shadow:var(--card-shadow-elevated)!important;
+}
+
+button{
+  border-width:1px!important;
+  box-shadow:0 1px 1px rgba(91,79,79,0.04),0 8px 18px rgba(132,103,92,0.08)!important;
+}
+button[style*="linear-gradient(135deg"]{
+  box-shadow:0 10px 24px rgba(192,112,136,0.20),inset 0 1px 0 rgba(255,255,255,0.22)!important;
+}
+button:active{transform:scale(0.985)!important}
+
+body.light-mode button[style*="card-bg"],
+body:not(.dark-mode) button[style*="card-bg"],
+body.light-mode div[style*="borderRadius"][style*="card-bg"],
+body:not(.dark-mode) div[style*="borderRadius"][style*="card-bg"],
+body.light-mode div[style*="card-bg-solid"][style*="borderRadius"],
+body:not(.dark-mode) div[style*="card-bg-solid"][style*="borderRadius"]{
+  border:1px solid rgba(111,86,79,0.08)!important;
+  box-shadow:0 1px 1px rgba(91,79,79,0.03),0 8px 22px rgba(132,103,92,0.08)!important;
+}
+
+div[style*="position:\"fixed\""][style*="bottom:0"]{
+  background:var(--nav-bg)!important;
+  border-top:1px solid var(--nav-border)!important;
+  box-shadow:var(--nav-shadow)!important;
+  backdrop-filter:blur(22px) saturate(1.2)!important;
+  -webkit-backdrop-filter:blur(22px) saturate(1.2)!important;
+}
+
+div[style*="borderRadius:18"][style*="gap:4"]{
+  background:rgba(255,255,255,0.68)!important;
+  border:1px solid rgba(111,86,79,0.08)!important;
+  box-shadow:0 8px 22px rgba(132,103,92,0.08)!important;
+}
+
+input,select,textarea{
+  border-width:1px!important;
+}
+body.light-mode input[style*="borderRadius"],
+body:not(.dark-mode) input[style*="borderRadius"],
+body.light-mode select[style*="borderRadius"],
+body:not(.dark-mode) select[style*="borderRadius"]{
+  box-shadow:inset 0 1px 2px rgba(91,79,79,0.04)!important;
+}
+
+div[style*="borderRadius:\"24px 24px 0 0\""],div[style*="borderRadius:24px 24px 0 0"]{
+  border-radius:28px 28px 0 0!important;
+}
+body.light-mode div[style*="borderRadius:\"24px 24px 0 0\""],
+body:not(.dark-mode) div[style*="borderRadius:\"24px 24px 0 0\""]{
+  background:rgba(255,252,249,0.96)!important;
+  box-shadow:0 -1px 0 rgba(111,86,79,0.08),0 -18px 60px rgba(132,103,92,0.18)!important;
+}
+
+@keyframes prioGlow{
+  0%,100%{border-color:rgba(192,112,136,0.34);box-shadow:0 12px 30px rgba(192,112,136,0.12),inset 0 1px 0 rgba(255,255,255,0.64)}
+  50%{border-color:rgba(111,168,152,0.34);box-shadow:0 12px 30px rgba(111,168,152,0.12),inset 0 1px 0 rgba(255,255,255,0.64)}
+}
+
+/* ═══════════════════════════════════════════════════════════
+   APPLE-STYLE FROSTED GLASS — final visual direction
+   Translucent iOS-like materials: blur, saturation, hairlines and highlights.
+   ═══════════════════════════════════════════════════════════ */
+:root,body,body.light-mode{
+  --bg-solid:#FFFBF8;
+  --card-bg:rgba(255,255,255,0.38);
+  --card-bg-solid:rgba(255,255,255,0.52);
+  --card-bg-alt:rgba(255,255,255,0.30);
+  --card-border:rgba(255,255,255,0.62);
+  --glass-blur:30px;
+  --glass-sat:1.9;
+  --sparkle-opacity:0.12;
+  --card-shadow:0 1px 0 rgba(255,255,255,0.70) inset,0 -1px 0 rgba(91,79,79,0.04) inset,0 16px 38px rgba(132,103,92,0.13),0 2px 6px rgba(132,103,92,0.06);
+  --card-shadow-elevated:0 1px 0 rgba(255,255,255,0.82) inset,0 -1px 0 rgba(91,79,79,0.05) inset,0 22px 56px rgba(132,103,92,0.16),0 4px 12px rgba(132,103,92,0.08);
+  --nav-bg:rgba(255,251,247,0.56);
+  --sheet-bg:rgba(255,252,249,0.68);
+  --picker-bg:rgba(255,252,249,0.72);
+}
+
+body.dark-mode{
+  --card-bg:rgba(28,42,68,0.42);
+  --card-bg-solid:rgba(31,47,76,0.58);
+  --card-bg-alt:rgba(34,50,80,0.38);
+  --card-border:rgba(255,228,184,0.18);
+  --glass-blur:28px;
+  --glass-sat:1.65;
+  --card-shadow:0 1px 0 rgba(255,228,184,0.13) inset,0 -1px 0 rgba(0,0,0,0.22) inset,0 18px 42px rgba(0,0,0,0.34),0 2px 8px rgba(0,0,0,0.22);
+  --card-shadow-elevated:0 1px 0 rgba(255,228,184,0.18) inset,0 -1px 0 rgba(0,0,0,0.25) inset,0 24px 58px rgba(0,0,0,0.42),0 4px 14px rgba(0,0,0,0.28);
+  --nav-bg:rgba(8,14,28,0.54);
+  --sheet-bg:rgba(12,22,40,0.70);
+  --picker-bg:rgba(12,22,40,0.76);
+}
+
+body::before{
+  background:
+    linear-gradient(150deg,rgba(255,255,255,0.70) 0%,rgba(255,248,242,0.58) 28%,rgba(246,221,227,0.48) 62%,rgba(217,207,243,0.34) 100%),
+    linear-gradient(180deg,#FFFCF9 0%,#FFF8F2 50%,#F4E6DF 100%);
+}
+body.dark-mode::before{
+  background:
+    linear-gradient(150deg,rgba(16,30,55,0.82) 0%,rgba(10,19,36,0.78) 42%,rgba(42,33,55,0.52) 100%),
+    linear-gradient(170deg,#080e1c 0%,#0c1628 48%,#101d35 100%);
+}
+
+.glass-card{
+  background:
+    linear-gradient(180deg,rgba(255,255,255,0.28),rgba(255,255,255,0.10)),
+    var(--card-bg)!important;
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(1.03)!important;
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(1.03)!important;
+  border:1px solid var(--card-border)!important;
+  border-radius:22px!important;
+  box-shadow:var(--card-shadow)!important;
+}
+.glass-card::before{
+  height:50%;
+  opacity:0.78;
+  background:linear-gradient(180deg,rgba(255,255,255,0.46) 0%,rgba(255,255,255,0.13) 50%,transparent 100%);
+  border-radius:inherit;
+}
+.glass-card::after{
+  left:12px;right:12px;bottom:0;height:1px;opacity:0.75;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.72),transparent);
+}
+
+body.light-mode .ob-hero,body:not(.dark-mode) .ob-hero{
+  background:
+    linear-gradient(180deg,rgba(255,255,255,0.44),rgba(255,255,255,0.16)),
+    rgba(255,255,255,0.34)!important;
+  border:1px solid rgba(255,255,255,0.70)!important;
+  border-radius:26px!important;
+  box-shadow:var(--card-shadow-elevated)!important;
+}
+body.dark-mode .ob-hero{
+  background:
+    linear-gradient(180deg,rgba(255,228,184,0.08),rgba(255,255,255,0.02)),
+    rgba(28,42,68,0.46)!important;
+  border:1px solid rgba(255,228,184,0.20)!important;
+  border-radius:26px!important;
+  box-shadow:var(--card-shadow-elevated)!important;
+}
+
+button{
+  backdrop-filter:blur(18px) saturate(1.45)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(1.45)!important;
+  border:1px solid rgba(255,255,255,0.44)!important;
+  box-shadow:0 1px 0 rgba(255,255,255,0.46) inset,0 8px 20px rgba(132,103,92,0.10)!important;
+}
+button[style*="linear-gradient(135deg"]{
+  border:1px solid rgba(255,255,255,0.32)!important;
+  box-shadow:0 1px 0 rgba(255,255,255,0.26) inset,0 12px 28px rgba(192,112,136,0.24)!important;
+}
+
+div[style*="position:\"fixed\""][style*="bottom:0"]{
+  background:linear-gradient(180deg,rgba(255,255,255,0.40),rgba(255,251,247,0.56))!important;
+  backdrop-filter:blur(34px) saturate(1.8)!important;
+  -webkit-backdrop-filter:blur(34px) saturate(1.8)!important;
+  border-top:1px solid rgba(255,255,255,0.56)!important;
+  box-shadow:0 -1px 0 rgba(255,255,255,0.64) inset,0 -18px 48px rgba(132,103,92,0.14)!important;
+}
+
+div[style*="borderRadius:18"][style*="gap:4"]{
+  background:rgba(255,255,255,0.34)!important;
+  backdrop-filter:blur(24px) saturate(1.7)!important;
+  -webkit-backdrop-filter:blur(24px) saturate(1.7)!important;
+  border:1px solid rgba(255,255,255,0.56)!important;
+  box-shadow:0 1px 0 rgba(255,255,255,0.60) inset,0 10px 24px rgba(132,103,92,0.11)!important;
+}
+
+body.light-mode div[style*="borderRadius:\"24px 24px 0 0\""],
+body:not(.dark-mode) div[style*="borderRadius:\"24px 24px 0 0\""]{
+  background:rgba(255,252,249,0.68)!important;
+  backdrop-filter:blur(34px) saturate(1.9)!important;
+  -webkit-backdrop-filter:blur(34px) saturate(1.9)!important;
+  border:1px solid rgba(255,255,255,0.62)!important;
+  box-shadow:0 -1px 0 rgba(255,255,255,0.72) inset,0 -22px 70px rgba(132,103,92,0.20)!important;
+}
+
+/* Liquid-glass refinement after live review */
+:root,body,body.light-mode{
+  --card-bg:rgba(255,255,255,0.22);
+  --card-bg-solid:rgba(255,255,255,0.34);
+  --card-bg-alt:rgba(255,255,255,0.18);
+  --card-border:rgba(255,255,255,0.72);
+  --nav-bg:rgba(255,255,255,0.30);
+}
+body::before{
+  background:
+    linear-gradient(145deg,rgba(255,255,255,0.68) 0%,rgba(255,247,240,0.42) 24%,rgba(239,214,226,0.48) 54%,rgba(210,221,236,0.42) 78%,rgba(255,248,242,0.58) 100%),
+    linear-gradient(180deg,#FFFCF9 0%,#F7E9E3 54%,#EEF3F5 100%);
+}
+.glass-card{
+  background:
+    linear-gradient(180deg,rgba(255,255,255,0.24),rgba(255,255,255,0.055)),
+    rgba(255,255,255,0.18)!important;
+  backdrop-filter:blur(42px) saturate(2.25) contrast(1.02)!important;
+  -webkit-backdrop-filter:blur(42px) saturate(2.25) contrast(1.02)!important;
+  border:1px solid rgba(255,255,255,0.72)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.86),
+    inset 0 -1px 0 rgba(255,255,255,0.18),
+    0 18px 42px rgba(89,73,65,0.13),
+    0 2px 8px rgba(89,73,65,0.06)!important;
+}
+.glass-card::before{
+  background:linear-gradient(180deg,rgba(255,255,255,0.58) 0%,rgba(255,255,255,0.16) 42%,transparent 100%);
+}
+body.light-mode .ob-hero,body:not(.dark-mode) .ob-hero{
+  background:
+    linear-gradient(180deg,rgba(255,255,255,0.30),rgba(255,255,255,0.08)),
+    rgba(255,255,255,0.16)!important;
+  border-color:rgba(255,255,255,0.78)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.90),
+    inset 0 -1px 0 rgba(255,255,255,0.20),
+    0 22px 54px rgba(89,73,65,0.14)!important;
+}
+button{
+  backdrop-filter:blur(24px) saturate(1.8)!important;
+  -webkit-backdrop-filter:blur(24px) saturate(1.8)!important;
+}
+button[style*="linear-gradient(135deg"]{
+  backdrop-filter:blur(18px) saturate(1.45)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(1.45)!important;
+}
+div[role="navigation"]{
+  bottom:8px!important;
+  left:10px!important;
+  right:10px!important;
+  border-radius:28px!important;
+  background:linear-gradient(180deg,rgba(255,255,255,0.36),rgba(255,255,255,0.18))!important;
+  border:1px solid rgba(255,255,255,0.74)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.82),
+    0 18px 45px rgba(89,73,65,0.16)!important;
+  backdrop-filter:blur(44px) saturate(2.15)!important;
+  -webkit-backdrop-filter:blur(44px) saturate(2.15)!important;
+}
+div[role="navigation"] button,
+div[role="navigation"] button[style]{
+  background:transparent!important;
+  border:1px solid transparent!important;
+  box-shadow:none!important;
+  border-radius:18px!important;
+}
+div[role="navigation"] button[aria-current="page"],
+div[role="navigation"] button[aria-current="page"][style]{
+  background:rgba(255,255,255,0.34)!important;
+  border:1px solid rgba(255,255,255,0.52)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.72),0 6px 16px rgba(89,73,65,0.08)!important;
+}

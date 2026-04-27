@@ -1,5 +1,6 @@
 package com.obubba.app.plugins;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import com.getcapacitor.Plugin;
@@ -46,25 +47,18 @@ public class TimerServicePlugin extends Plugin {
     @PluginMethod
     public void stopTimer(PluginCall call) {
         try {
-            Intent intent = new Intent(getContext(), TimerService.class);
-            intent.setAction(TimerService.ACTION_STOP);
+            getContext()
+                    .getSharedPreferences(TimerService.PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit()
+                    .clear()
+                    .apply();
 
-            // Try to send the stop action; if the service isn't running, just stop it
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    getContext().startForegroundService(intent);
-                } else {
-                    getContext().startService(intent);
-                }
-            } catch (Exception e) {
-                // Service might not be running, that's fine
-            }
-
-            // Also try direct stop in case the above didn't work
+            // Stop-only actions must not use startForegroundService(): the service
+            // will not call startForeground() for ACTION_STOP, which crashes on O+.
             try {
                 getContext().stopService(new Intent(getContext(), TimerService.class));
             } catch (Exception e) {
-                // ignore
+                // Service might not be running.
             }
 
             JSObject ret = new JSObject();
@@ -111,16 +105,18 @@ public class TimerServicePlugin extends Plugin {
         try {
             Intent intent = new Intent(getContext(), TimerService.class);
             intent.setAction(TimerService.ACTION_STOP_PREDICTION);
+            boolean stopped = true;
+
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    getContext().startForegroundService(intent);
-                } else {
-                    getContext().startService(intent);
-                }
-            } catch (Exception e) { /* service might not be running */ }
+                getContext().startService(intent);
+            } catch (Exception e) {
+                // Service might not be running, or Android may refuse a background
+                // start. In either case, the prediction is no longer active in JS.
+                stopped = false;
+            }
 
             JSObject ret = new JSObject();
-            ret.put("stopped", true);
+            ret.put("stopped", stopped);
             call.resolve(ret);
         } catch (Exception e) {
             call.reject("Failed to stop prediction: " + e.getMessage(), e);
@@ -132,6 +128,7 @@ public class TimerServicePlugin extends Plugin {
         try {
             String side = call.getString("side", null);
             String babyName = call.getString("babyName", null);
+            boolean updated = true;
 
             Intent intent = new Intent(getContext(), TimerService.class);
             intent.setAction(TimerService.ACTION_UPDATE);
@@ -142,14 +139,16 @@ public class TimerServicePlugin extends Plugin {
                 intent.putExtra(TimerService.EXTRA_BABY_NAME, babyName);
             }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                getContext().startForegroundService(intent);
-            } else {
+            try {
                 getContext().startService(intent);
+            } catch (Exception e) {
+                // An update should never crash the app if the foreground service
+                // has already stopped or Android blocks a background start.
+                updated = false;
             }
 
             JSObject ret = new JSObject();
-            ret.put("updated", true);
+            ret.put("updated", updated);
             call.resolve(ret);
         } catch (Exception e) {
             call.reject("Failed to update timer service: " + e.getMessage(), e);
