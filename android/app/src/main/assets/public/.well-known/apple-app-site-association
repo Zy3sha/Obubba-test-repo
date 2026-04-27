@@ -1,0 +1,17 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "VWJU5WSFNX.com.obubba.app",
+        "paths": ["*"]
+      }
+    ]
+  },
+  "activitycontinuation": {
+    "apps": ["VWJU5WSFNX.com.obubba.app"]
+  },
+  "webcredentials": {
+    "apps": ["VWJU5WSFNX.com.obubba.app"]
+  }
+}

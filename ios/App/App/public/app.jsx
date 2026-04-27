@@ -5576,7 +5576,13 @@ function App(){
     // Widget button intents write to UserDefaults async. poll aggressively to catch it
     OB.lifecycle.onResume(()=>{
       OB.statusBar.setStyle(document.body.classList.contains('dark-mode'));
-      OB.widgets.updateWidgetData();
+      // Force widget refresh with current cached data on every resume
+      try {
+        var _wdResume = localStorage.getItem("ob_widget_data_v1");
+        if(_wdResume && window.Capacitor?.Plugins?.OBWidgetBridge) {
+          window.Capacitor.Plugins.OBWidgetBridge.setData({ json: _wdResume }).catch(()=>{});
+        }
+      } catch{}
       // Re-check premium on resume (subscription may have been purchased/restored externally)
       if(STORE_READY && !_isOwner && window._purchases && window._purchases.checkEntitlements){
         window._purchases.checkEntitlements().then(function(_p){
@@ -5601,9 +5607,14 @@ function App(){
       }
     });
 
-    // Listen for app pause. save widget data
+    // Listen for app pause. push widget data so it's fresh when user sees widget
     OB.lifecycle.onPause(()=>{
-      OB.widgets.updateWidgetData();
+      try {
+        var _wdPause = localStorage.getItem("ob_widget_data_v1");
+        if(_wdPause && window.Capacitor?.Plugins?.OBWidgetBridge) {
+          window.Capacitor.Plugins.OBWidgetBridge.setData({ json: _wdPause }).catch(()=>{});
+        }
+      } catch{}
     });
 
     // Handle deep links
@@ -9892,9 +9903,11 @@ function App(){
       const allKeys = [];
       for (let i = 0; i < localStorage.length; i++) allKeys.push(localStorage.key(i));
       allKeys.forEach(k => {
-        // Keep only device-level prefs that aren't account-specific
+        // Keep device-level prefs + any keys not belonging to OBubba
         const keep = k === "ob_theme" || k === "ob_widget_theme" || k === "ob_locale";
-        if (!keep) { try { localStorage.removeItem(k); } catch {} }
+        // Only clear keys that are known OBubba prefixes or explicit known keys
+        const isOBubba = k.startsWith("ob_") || k.startsWith("obubba") || k.startsWith("nap_") || k.startsWith("bed_") || k.startsWith("breast_") || k.startsWith("timer_") || ["children_v1","active_child","backup_code","family_code","family_username","auth_verified","tut_v2","install_date_v1","onboarded_v2","use_personal_recs_v1","fluid_unit_v1","measure_unit_v1","reminders_v1","appointments_v1","pinned_notes_v1","meds_v1","saved_meds_v1","emergency_contacts_v1","carer_notes_v1","carer_comfort_v1","wellbeing_history_v1","allergen_profile_v1","bio_enabled","last_breast_side","pred_accuracy_v1","_lastWidgetData","_hasBreast"].includes(k);
+        if (!keep && isOBubba) { try { localStorage.removeItem(k); } catch {} }
       });
     } catch {}
 
@@ -13318,20 +13331,8 @@ function App(){
                         </div>
                         <button onClick={()=>{
                           haptic();
-                          const newTime = prompt("Started earlier? Enter time (e.g. 2:15am, 02:15):");
-                          if(newTime){
-                            const parsed = parseTimeFree(newTime);
-                            if(parsed){
-                              setBreastStartTime(parsed);
-                              try{localStorage.setItem("breast_startTime",parsed);}catch{}
-                              const [h,m]=parsed.split(":").map(Number);
-                              const now=new Date();
-                              let elapsed=Math.max(0,Math.floor((now.getTime()-new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0).getTime())/1000));
-                              if(elapsed>86400) elapsed=0;
-                              setBreastSec({L:breastSide==="L"?elapsed:0, R:breastSide==="R"?elapsed:0});
-                              showToast("🤱 Start time updated to "+fmt12(parsed),1500,1);
-                            } else { showToast("Couldn't parse that time",1500,2); }
-                          }
+                          setShowBreastStartPicker(true);
+                          setBreastCustomStart(breastStartTime||nowTime());
                         }} style={{background:"none",border:"none",color:C.lt,fontSize:10,cursor:_cP,textAlign:"center",width:"100%",marginTop:4,fontFamily:_fI}}>
                           Started earlier? Tap to edit
                         </button>
@@ -15266,6 +15267,47 @@ function App(){
           blended = posAvg;
         }
       }
+      // ── Optimal WW from settle-time correlation ──
+      // If we have enough settle-time data, bias the prediction toward the
+      // wake window range that produces the fastest settling (= best naps).
+      // This is the "learn what works for YOUR baby" intelligence.
+      if (_usePersonal) {
+        try {
+          const _optWW = getOptimalWakeWindow();
+          if (_optWW && _optWW.sampleSize >= 10 && _optWW.bestBucket.count >= 3) {
+            const _optMid = (_optWW.optimalMin + _optWW.optimalMax) / 2;
+            // Blend: 70% rhythm-based prediction + 30% settle-time-optimal
+            // This gently steers toward the WW that gives best naps
+            blended = Math.round(blended * 0.7 + _optMid * 0.3);
+          }
+        } catch {}
+        // ── Short-nap diagnosis → WW adjustment ──
+        // If the last nap was diagnosed as undertired/overtired, apply the
+        // recommended shift so the prediction matches the advice text
+        try {
+          if (_todayCompNaps.length > 0) {
+            const _lastCompNap = _todayCompNaps[_todayCompNaps.length - 1];
+            const _priorEntries = entries.filter(e => !e.night && timeVal(e) < timeVal(_lastCompNap)).sort((a,b) => timeVal(a) - timeVal(b));
+            const _napDx = diagnoseNapPattern(_lastCompNap, _priorEntries, ageWeeks, ww);
+            if (_napDx) {
+              if (_napDx.type === "undertired") blended = Math.min(ww.max, blended + 15);
+              else if (_napDx.type === "overtired") blended = Math.max(ww.min, blended - 10);
+            }
+          }
+        } catch {}
+        // ── Growth spurt → relax predictions ──
+        // Auto-detected growth spurts get the same accommodation as teething
+        try {
+          const _todayFeeds = entries.filter(e => (e.type === "feed" || e.feedType) && !e.night);
+          const _todayMl = _todayFeeds.reduce((s, f) => s + (f.amount || 0), 0);
+          const _last7 = Object.keys(days).filter(k => k < selDay).sort().slice(-7);
+          const _avgMl = _last7.length >= 3 ? Math.round(_last7.reduce((s, k) => s + (days[k] || []).filter(e => e.type === "feed" && !e.night).reduce((s2, f) => s2 + (f.amount || 0), 0), 0) / _last7.length) : 0;
+          if (_avgMl > 0 && _todayMl > _avgMl * 1.3) {
+            // Growth spurt detected — shorten WW by 10% (baby needs more sleep)
+            blended = Math.round(blended * 0.9);
+          }
+        } catch {}
+      }
       const floor = _usePersonal ? Math.max(ww.min - 20, 30) : ww.min;
       const clamped = Math.max(floor, Math.min(ww.max + 10, blended));
       wakeWindowMin = Math.max(floor, Math.round(clamped * 0.9));
@@ -15682,11 +15724,38 @@ function App(){
       try { return (_getNightAdjustments(selDay) || {}).bedtimeShiftMin || 0; }
       catch { return 0; }
     })();
+    // ── Best-night bedtime anchor ──
+    // Blend the predicted bedtime with the average bedtime from the baby's
+    // 3 best nights (fewest wakes). This steers toward what actually works.
+    const _bestNightBed = (()=>{
+      try {
+        if (!hasAccess()) return null;
+        const _dk = Object.keys(days).sort().slice(-21);
+        const _scores = [];
+        _dk.forEach(dk => {
+          const ent = days[dk] || [];
+          if (ent.length < 4) return;
+          const bed = ent.find(e => e.type === "sleep" && !e.night && e.time && e.time.includes(":"));
+          if (!bed) return;
+          const nightWakes = ent.filter(e => e.night).length;
+          _scores.push({ bedMins: timeVal(bed), nightWakes });
+        });
+        if (_scores.length < 10) return null;
+        const _best3 = [..._scores].sort((a, b) => a.nightWakes - b.nightWakes).slice(0, 3);
+        return Math.round(_best3.reduce((s, d) => s + d.bedMins, 0) / _best3.length);
+      } catch { return null; }
+    })();
     const _applyNightShift = (result) => {
-      if (!result || !result.time || !_nightShift) return result;
+      if (!result || !result.time) return result;
       try {
         const [_bh, _bm] = result.time.split(":").map(Number);
-        let _mins = _bh * 60 + _bm + _nightShift;
+        let _mins = _bh * 60 + _bm;
+        // Blend with best-night bedtime (80% prediction + 20% best-night)
+        if (_bestNightBed && Math.abs(_mins - _bestNightBed) < 90) {
+          _mins = Math.round(_mins * 0.8 + _bestNightBed * 0.2);
+        }
+        // Apply night diagnosis shift
+        _mins += _nightShift || 0;
         // Clamp to sane bedtime window (17:00 to 23:30) so an aggressive
         // adjustment can't push baby past midnight or before 5pm.
         if (_mins < 17 * 60) _mins = 17 * 60;
@@ -35385,46 +35454,63 @@ function App(){
                     try { _enginePred = bedtimePrediction(); } catch { _enginePred = null; }
                   }
                   const _engineSaysBridge = !!(_enginePred && _enginePred.forceBridge);
-                  const gapToBed = bedM - cursor;
+                  const _tickBridgeBedMins = (tickDataRef.current || {}).bedMins;
+                  const _bridgeTargetBed = (typeof _tickBridgeBedMins === "number" && _tickBridgeBedMins > cursor)
+                    ? Math.min(_tickBridgeBedMins, _ageBedCeiling)
+                    : (scheduleOverride && scheduleOverride.bed)
+                      ? Math.min(scheduleOverride.bed, _ageBedCeiling)
+                      : bedM;
+                  const gapToBed = _bridgeTargetBed - cursor;
                   const _localSaysBridge = gapToBed > ww.max + 15;
 
-                  if ((_engineSaysBridge || _localSaysBridge) && napIdx >= expectedTotal) {
-                    // Use engine suggestion if available, else fall back to local math.
-                    const _engBridge = _engineSaysBridge && _enginePred.bridgeSuggestion;
-                    let bridgeStart;
-                    let bridgeDur;
-                    if (_engBridge && _engBridge.start) {
-                      const [_ebh, _ebm] = _engBridge.start.split(":").map(Number);
-                      bridgeStart = _ebh * 60 + _ebm;
-                      bridgeDur = _engBridge.duration || 20;
-                    } else {
-                      bridgeStart = cursor + Math.round(ww.min * 0.8);
-                      bridgeDur = 20;
-                    }
-                    const bridgeEnd = bridgeStart + bridgeDur;
-                    // Sanity: bridge has to start after cursor (can't bridge backward)
-                    // and end at least 30 min before bedtime cap. Also cap at
-                    // 23:30 so a very late plan doesn't schedule a "bridge nap"
-                    // at 2am tomorrow on today's timeline.
+                  if (_engineSaysBridge || _localSaysBridge) {
+                    const _engineBridgeList = _enginePred && Array.isArray(_enginePred.catchUpNaps)
+                      ? _enginePred.catchUpNaps
+                      : (_enginePred && _enginePred.bridgeSuggestion ? [_enginePred.bridgeSuggestion] : []);
                     const _MIDNIGHT_MINUS_30 = 23*60 + 30;
-                    const _safeStart = Math.min(_MIDNIGHT_MINUS_30, Math.max(cursor + 10, bridgeStart));
-                    const _safeEnd = _safeStart + bridgeDur;
-                    if (_safeEnd + 30 < _ageBedCeiling) {
+                    const _minBridgeBedGap = w < 30 ? 60 : 90;
+                    let _bridgesAdded = 0;
+                    while (_bridgesAdded < 4 && (_bridgeTargetBed - cursor > ww.max + 15 || (_engineSaysBridge && _bridgesAdded === 0))) {
+                      const _engBridge = _engineBridgeList[_bridgesAdded];
+                      let bridgeStart;
+                      let bridgeDur;
+                      if (_engBridge && _engBridge.start) {
+                        const [_ebh, _ebm] = _engBridge.start.split(":").map(Number);
+                        bridgeStart = _ebh * 60 + _ebm;
+                        bridgeDur = _engBridge.duration || (w < 22 ? 25 : w < 39 ? 20 : 15);
+                      } else {
+                        bridgeStart = cursor + Math.round(ww.min * 0.8);
+                        bridgeDur = w < 22 ? 25 : w < 39 ? 20 : 15;
+                      }
+                      // Sanity: bridge has to start after cursor (can't bridge backward)
+                      // and leave enough pre-bed space. Also cap at 23:30 so a very
+                      // late plan doesn't schedule a "bridge nap" after midnight.
+                      const _safeStart = Math.min(_MIDNIGHT_MINUS_30, Math.max(cursor + 10, bridgeStart));
+                      const _safeEnd = _safeStart + bridgeDur;
+                      if (_safeEnd + _minBridgeBedGap > _bridgeTargetBed) break;
+                      if (_safeEnd + 30 >= _ageBedCeiling) break;
                       items.push({
                         icon: "\u{1F309}", label: "Bridge nap",
                         time: `${fmt12(mtp(_safeStart))} \u2013 ${fmt12(mtp(_safeEnd))}`,
                         sub: `~${bridgeDur}m bridge nap to reach bedtime comfortably`,
-                        predicted: true, bridge: true, mins: _safeStart
+                        predicted: true, bridge: true, mins: _safeStart,
+                        predictedDur: bridgeDur
                       });
                       hasPredictions = true;
                       cursor = _safeEnd;
-                      // Recalculate bedtime from bridge end. Prefer engine's time
-                      // if it's reasonable (after cursor + 60min), else local.
+                      _bridgesAdded++;
+                    }
+                    if (_bridgesAdded > 0) {
+                      // Recalculate bedtime from the last bridge. Prefer engine's
+                      // time if it is still reachable; otherwise keep the target
+                      // bedtime once bridges have made the gap safe.
                       const _engineBed = _enginePred && _enginePred.time
                         ? (()=>{ const [_eh,_em] = _enginePred.time.split(":").map(Number); return _eh*60+_em; })()
                         : null;
-                      if (_engineBed && _engineBed >= cursor + 60) {
+                      if (_engineBed && _engineBed >= cursor + _minBridgeBedGap) {
                         bedM = _engineBed;
+                      } else if (_bridgeTargetBed >= cursor + _minBridgeBedGap) {
+                        bedM = _bridgeTargetBed;
                       } else {
                         bedM = clampBedtime(cursor + Math.round((ww.min + ww.max) / 2), w);
                       }
@@ -44125,7 +44211,6 @@ function App(){
                     🛠️ It needs some work
                   </button>
                 </div>
-                <button onClick={()=>{dismissReview(false);}} style={{background:"none",border:"none",color:C.lt,fontSize:12,cursor:_cP,marginTop:14,fontStyle:"italic"}}>Maybe later</button>
               </div>
           </div>
         </div>
@@ -46257,11 +46342,7 @@ Severe: breathing changes, swelling of face/throat, very pale or floppy. please 
               ))}
               <button onClick={()=>{
                 haptic();
-                const _name2 = prompt("Step name (e.g. 'White noise on')");
-                if (!_name2) return;
-                const _emoji = prompt("Emoji (e.g. 🎵)") || "✨";
-                const _dur = parseInt(prompt("Duration in minutes") || "5") || 5;
-                const _newSteps = [..._steps, {emoji:_emoji, title:_name2, duration:_dur, note:""}];
+                const _newSteps = [..._steps, {emoji:"✨", title:"New step", duration:5, note:"", _editing:true}];
                 setCustomRoutine(_newSteps);
               }} style={{width:"100%",padding:"12px",borderRadius:12,border:`2px dashed ${C.blush}`,background:"transparent",color:C.mid,fontSize:13,fontWeight:600,cursor:_cP,marginBottom:12}}>
                 + Add step

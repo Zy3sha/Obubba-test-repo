@@ -88,14 +88,16 @@ function progressiveWW(ageWeeks, napIndex, totalNaps, disruptionMode = false) {
 function getAgeNapProfile(ageWeeks) {
   if ((!ageWeeks && ageWeeks !== 0)) return { expectedNaps:3, idealNapDurMin:30, idealNapDurMax:90, idealTotalMin:120, idealTotalMax:240 };
   const months = ageWeeks / 4.33;
+  // Keep the higher nap count around major transitions so the engine does
+  // not force an abrupt drop exactly when families need flexible guidance.
   if (ageWeeks < 6)  return { expectedNaps:5, idealNapDurMin:20, idealNapDurMax:60,  idealTotalMin:240, idealTotalMax:360 };
   if (months < 3)    return { expectedNaps:4, idealNapDurMin:30, idealNapDurMax:90,  idealTotalMin:180, idealTotalMax:300 };
   if (months < 5)    return { expectedNaps:3, idealNapDurMin:40, idealNapDurMax:90,  idealTotalMin:150, idealTotalMax:240 };
   if (months < 7)    return { expectedNaps:3, idealNapDurMin:45, idealNapDurMax:120, idealTotalMin:120, idealTotalMax:210 };
-  if (months < 9)    return { expectedNaps:2, idealNapDurMin:60, idealNapDurMax:120, idealTotalMin:120, idealTotalMax:210 };
+  if (months < 9)    { const r = { expectedNaps:2, idealNapDurMin:60, idealNapDurMax:120, idealTotalMin:120, idealTotalMax:210 }; if (ageWeeks >= 28 && ageWeeks <= 31) r.expectedNaps = 3; return r; }
   if (months < 12)   return { expectedNaps:2, idealNapDurMin:60, idealNapDurMax:120, idealTotalMin:120, idealTotalMax:180 };
   if (months < 15)   return { expectedNaps:2, idealNapDurMin:50, idealNapDurMax:110, idealTotalMin:90,  idealTotalMax:150 };
-  if (ageWeeks < 78) return { expectedNaps:1, idealNapDurMin:60, idealNapDurMax:120, idealTotalMin:60,  idealTotalMax:120 };
+  if (ageWeeks < 78) { const r = { expectedNaps:1, idealNapDurMin:60, idealNapDurMax:120, idealTotalMin:60,  idealTotalMax:120 }; if (ageWeeks >= 63 && ageWeeks <= 67) r.expectedNaps = 2; return r; }
   return               { expectedNaps:1, idealNapDurMin:60, idealNapDurMax:90,  idealTotalMin:60,  idealTotalMax:90  };
 }
 
@@ -184,6 +186,7 @@ function projectDayPlan({ ageWeeks, wakeMins, avgNapDur, targetBedMins, disrupti
     const napStart = cursor + clampWakeWindow(progressiveWW(w, napIdx, expectedTotal, disruptionMode), w);
     const isLast = napIdx === expectedTotal - 1;
     let napDur = safeNapDur;
+    let isBridge = false;
     let placed = false;
 
     if (napStart + minBedWW > napFitCeiling) break;
@@ -193,6 +196,7 @@ function projectDayPlan({ ageWeeks, wakeMins, avgNapDur, targetBedMins, disrupti
       for (const tryDur of durations) {
         if (napStart + tryDur + minBedWW <= napFitCeiling) {
           napDur = tryDur;
+          isBridge = tryDur <= 25;
           placed = true;
           break;
         }
@@ -204,7 +208,7 @@ function projectDayPlan({ ageWeeks, wakeMins, avgNapDur, targetBedMins, disrupti
     }
 
     const napEnd = napStart + napDur;
-    items.push({ type: "nap", start: napStart, end: napEnd, label: `Nap ${napIdx+1}`, dur: napDur });
+    items.push({ type: "nap", start: napStart, end: napEnd, label: isBridge ? "Bridge nap" : `Nap ${napIdx+1}`, dur: napDur, bridge: isBridge });
     cursor = napEnd;
     napIdx++;
   }
@@ -224,6 +228,21 @@ function projectDayPlan({ ageWeeks, wakeMins, avgNapDur, targetBedMins, disrupti
   } else {
     bedMins = clampBedtime(cursor + progressiveWW(w, napIdx, expectedTotal, disruptionMode), w);
   }
+
+  // If the desired bedtime leaves a wake window that is too long, insert
+  // consultant-style rescue/bridge naps until bedtime is reachable. This
+  // mirrors the live engine's catch-up nap intent and protects catnap days.
+  let bridgeGuard = 0;
+  while (bedMins - cursor > ww.max + 15 && bridgeGuard < 4) {
+    const bridgeDur = w < 22 ? 25 : w < 39 ? 20 : 15;
+    const bridgeStart = Math.max(cursor + 10, cursor + Math.round(ww.min * 0.8));
+    const bridgeEnd = bridgeStart + bridgeDur;
+    if (bridgeEnd + minBedWW > Math.min(bedMins, ageBedCeiling)) break;
+    items.push({ type: "nap", start: bridgeStart, end: bridgeEnd, label: "Bridge nap", dur: bridgeDur, bridge: true });
+    cursor = bridgeEnd;
+    bridgeGuard++;
+  }
+
   items.push({ type: "bed", time: bedMins, label: "Bedtime" });
 
   return { items, bedMins };
@@ -324,8 +343,9 @@ function checkInvariants(scenario, plan) {
 
   // I-9: nap count within reasonable range for age
   const profile = getAgeNapProfile(w);
-  if (naps.length > profile.expectedNaps + 2) {
-    issues.push(`[I-9] ${naps.length} naps scheduled, age expects ${profile.expectedNaps} (+2 tolerance)`);
+  const structuralNaps = naps.filter(n => !n.bridge);
+  if (structuralNaps.length > profile.expectedNaps + 2) {
+    issues.push(`[I-9] ${structuralNaps.length} structural naps scheduled, age expects ${profile.expectedNaps} (+2 tolerance)`);
   }
 
   // I-10: total day sleep within 50% of ideal range (soft)
@@ -340,7 +360,7 @@ function checkInvariants(scenario, plan) {
   // I-11: engine-predicted wake windows are non-decreasing (progressive).
   // User-logged completed naps are excluded because real parents don't
   // perfectly follow progressive WW.
-  const enginePredicted = naps.filter((_, idx) => idx >= completedCount);
+  const enginePredicted = naps.filter((n, idx) => idx >= completedCount && !n.bridge);
   if (enginePredicted.length >= 2) {
     let prevWW = null;
     let prevEnd = completedCount > 0 ? naps[completedCount-1].end : wake.time;
@@ -404,6 +424,14 @@ function mtp(mins) {
   const ap = h >= 12 ? "pm" : "am";
   const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
   return `${h12}:${String(m).padStart(2,"0")}${ap}`;
+}
+
+function hm(mins) {
+  if (mins == null || isNaN(mins)) return "??";
+  const h = Math.floor(Math.abs(mins) / 60);
+  const m = Math.round(Math.abs(mins) % 60);
+  if (h <= 0) return `${m}m`;
+  return m ? `${h}h${String(m).padStart(2, "0")}m` : `${h}h`;
 }
 
 // ─── Scenario matrix — REAL LIFE ─────────────────────────────────────
@@ -681,6 +709,102 @@ if (criticals.length) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// CONSULTANT SIMULATIONS — age, nap duration, nap timing, bedtime
+// ═══════════════════════════════════════════════════════════════
+// These scenarios sit above raw invariants. They check whether the plan feels
+// sleep-consultant sensible for parents: no abrupt transition drops, no tiny
+// babies pushed far past max wake windows, no late naps hidden without review.
+const consultantSimulations = [
+  { category: "Newborn", name: "2w newborn, frequent short naps, late bedtime", ageWeeks: 2, wakeMins: 8*60, avgNapDur: 40, targetBedMins: 21*60, expectedProfileNaps: 5 },
+  { category: "Newborn", name: "6w circadian forming, 50m naps", ageWeeks: 6, wakeMins: 7*60+30, avgNapDur: 50, targetBedMins: 20*60, expectedProfileNaps: 4 },
+  { category: "Young baby", name: "3mo catnap day, early bedtime target", ageWeeks: 12, wakeMins: 7*60, avgNapDur: 25, targetBedMins: 19*60 },
+  { category: "Young baby", name: "5mo short-nap day, 30m naps", ageWeeks: 22, wakeMins: 7*60, avgNapDur: 30, targetBedMins: 19*60, expectedProfileNaps: 3 },
+  { category: "Young baby", name: "6mo teething mode, shorter wake windows", ageWeeks: 26, wakeMins: 7*60, avgNapDur: 45, targetBedMins: 18*60+30, disruptionMode: true },
+  { category: "Transition", name: "7mo 3-to-2 transition keeps optional 3rd nap", ageWeeks: 30, wakeMins: 7*60, avgNapDur: 90, targetBedMins: 19*60, expectedProfileNaps: 3 },
+  { category: "Crawler", name: "9mo stable 2-nap day", ageWeeks: 39, wakeMins: 7*60, avgNapDur: 90, targetBedMins: 19*60, expectedProfileNaps: 2 },
+  { category: "Crawler", name: "12mo late wake, 2-nap pressure test", ageWeeks: 52, wakeMins: 9*60, avgNapDur: 90, targetBedMins: 19*60+30, expectedProfileNaps: 2 },
+  { category: "Toddler", name: "15mo 2-to-1 transition keeps optional 2nd nap", ageWeeks: 65, wakeMins: 7*60, avgNapDur: 120, targetBedMins: 19*60+30, expectedProfileNaps: 2 },
+  { category: "Toddler", name: "18mo confirmed 1-nap day", ageWeeks: 78, wakeMins: 7*60, avgNapDur: 90, targetBedMins: 19*60+30, expectedProfileNaps: 1 },
+  { category: "Toddler", name: "2y solid single nap", ageWeeks: 104, wakeMins: 7*60, avgNapDur: 90, targetBedMins: 19*60+30, expectedProfileNaps: 1 },
+];
+
+const consultantFailures = [];
+const consultantFlags = [];
+
+function consultantRecord(kind, sim, msg, plan) {
+  const line = plan.items.map(i => {
+    if (i.type === "wake") return `wake ${mtp(i.time)}`;
+    if (i.type === "nap") return `${i.label || "nap"} ${mtp(i.start)}-${mtp(i.end)}`;
+    if (i.type === "bed") return `bed ${mtp(i.time)}`;
+    return "";
+  }).filter(Boolean).join(" -> ");
+  const entry = { category: sim.category, name: sim.name, msg, line };
+  if (kind === "failure") consultantFailures.push(entry);
+  else consultantFlags.push(entry);
+}
+
+for (const sim of consultantSimulations) {
+  const effectiveWake = sim.wakeMins != null ? clampWake(sim.wakeMins) : sim.wakeMins;
+  const plan = projectDayPlan({
+    ageWeeks: sim.ageWeeks,
+    wakeMins: effectiveWake,
+    avgNapDur: sim.avgNapDur,
+    targetBedMins: sim.targetBedMins,
+    disruptionMode: sim.disruptionMode,
+    completedNaps: sim.completedNaps || [],
+    napOnFirstStart: sim.napOnFirstStart,
+  });
+  const profile = getAgeNapProfile(sim.ageWeeks);
+  const ww = getWakeWindow(sim.ageWeeks);
+  const issues = checkInvariants({ ...sim, wakeMins: effectiveWake }, plan);
+  const criticalHits = issues.filter(i => i.includes("CRITICAL"));
+  if (criticalHits.length) {
+    criticalHits.forEach(i => consultantRecord("failure", sim, i, plan));
+  }
+
+  if (sim.expectedProfileNaps != null && profile.expectedNaps !== sim.expectedProfileNaps) {
+    consultantRecord("failure", sim, `Expected profile ${sim.expectedProfileNaps} naps, got ${profile.expectedNaps}`, plan);
+  }
+
+  const naps = plan.items.filter(i => i.type === "nap");
+  const bed = plan.items.find(i => i.type === "bed");
+  const wake = plan.items.find(i => i.type === "wake");
+  const lastNapEnd = naps.length ? naps[naps.length - 1].end : wake.time;
+  const finalWW = bed.time - lastNapEnd;
+  const tolerance = sim.ageWeeks < 13 ? 30 : sim.ageWeeks < 52 ? 45 : 60;
+
+  if (naps.length && finalWW > ww.max + tolerance) {
+    consultantRecord("flag", sim, `Final wake window ${hm(finalWW)} exceeds age max ${hm(ww.max)} by >${tolerance}m. Review bridge nap or earlier bedtime copy.`, plan);
+  }
+  if (sim.avgNapDur <= 35 && naps.length && finalWW > ww.max + 15) {
+    consultantRecord("flag", sim, `Catnap day ends with ${hm(finalWW)} final wake window. Parent-facing advice should mention rescue nap or earlier bedtime.`, plan);
+  }
+  if (sim.ageWeeks >= 39) {
+    const lateNap = naps.find(n => n.start >= 17*60+30 && !n.bridge);
+    if (lateNap) {
+      consultantRecord("flag", sim, `Late nap starts at ${mtp(lateNap.start)} for an older baby/toddler. Make sure UI explains this as a pressure-test day, not a default routine.`, plan);
+    }
+  }
+}
+
+console.log("\n═══════════════════════════════════════════════════════════════");
+console.log("  CONSULTANT SIMULATIONS — age × naps × bedtime");
+console.log("═══════════════════════════════════════════════════════════════");
+console.log(`  ${consultantSimulations.length} scenarios run`);
+console.log(`  Hard failures:       ${consultantFailures.length}`);
+console.log(`  Review flags:        ${consultantFlags.length}`);
+if (consultantFailures.length) {
+  console.log("\n  Hard failures:");
+  consultantFailures.forEach(f => console.log(`    🚨 [${f.category}] ${f.name}: ${f.msg} | ${f.line}`));
+}
+if (consultantFlags.length) {
+  console.log("\n  Review flags:");
+  consultantFlags.slice(0, 12).forEach(f => console.log(`    ⚠️  [${f.category}] ${f.name}: ${f.msg} | ${f.line}`));
+  if (consultantFlags.length > 12) console.log(`    … and ${consultantFlags.length - 12} more`);
+}
+console.log("═══════════════════════════════════════════════════════════════\n");
+
+// ═══════════════════════════════════════════════════════════════
 // COMBINATORIAL SWEEP — exhaust every age × wake × nap-duration × bedtime
 // ═══════════════════════════════════════════════════════════════
 // The scenario matrix above is hand-picked real-life cases. This sweep
@@ -903,6 +1027,6 @@ if (_sweepWarns.length > 0 && _sweepFailures.length === 0) {
 console.log("═══════════════════════════════════════════════════════════════\n");
 
 // Non-zero exit on hard failures so CI / npm test catches them
-if (_sweepFailures.length > 0 || criticals.length > 0) process.exit(1);
+if (_sweepFailures.length > 0 || criticals.length > 0 || consultantFailures.length > 0) process.exit(1);
 
-process.exit(criticalIssues > 0 ? 1 : 0);
+process.exit(criticalIssues > 0 || consultantFailures.length > 0 ? 1 : 0);

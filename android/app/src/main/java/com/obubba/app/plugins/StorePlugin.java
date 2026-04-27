@@ -53,25 +53,33 @@ public class StorePlugin extends Plugin implements PurchasesUpdatedListener {
     }
 
     private void connectBilling(Runnable onConnected) {
-        if (billingClient.isReady()) {
-            if (onConnected != null) onConnected.run();
-            return;
-        }
-        billingClient.startConnection(new BillingClientStateListener() {
-            @Override
-            public void onBillingSetupFinished(@NonNull BillingResult result) {
-                if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-                    Log.i(TAG, "Billing connected");
-                    if (onConnected != null) onConnected.run();
-                } else {
-                    Log.w(TAG, "Billing connect failed: " + result.getDebugMessage());
+        try {
+            if (billingClient.isReady()) {
+                if (onConnected != null) onConnected.run();
+                return;
+            }
+            billingClient.startConnection(new BillingClientStateListener() {
+                @Override
+                public void onBillingSetupFinished(@NonNull BillingResult result) {
+                    try {
+                        if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                            Log.i(TAG, "Billing connected");
+                            if (onConnected != null) onConnected.run();
+                        } else {
+                            Log.w(TAG, "Billing connect failed: " + result.getDebugMessage());
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Billing setup callback error", e);
+                    }
                 }
-            }
-            @Override
-            public void onBillingServiceDisconnected() {
-                Log.w(TAG, "Billing disconnected");
-            }
-        });
+                @Override
+                public void onBillingServiceDisconnected() {
+                    Log.w(TAG, "Billing disconnected");
+                }
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Billing connect error", e);
+        }
     }
 
     @PluginMethod

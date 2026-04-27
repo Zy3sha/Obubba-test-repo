@@ -24,7 +24,7 @@ public class TimerService extends Service {
     private static final String CHANNEL_ID = "obubba_timers";
     private static final int NOTIFICATION_ID = 99999;
     private static final long UPDATE_INTERVAL_MS = 10000; // 10 seconds
-    private static final String PREFS_NAME = "obubba_timer_state";
+    public static final String PREFS_NAME = "obubba_timer_state";
 
     public static final String ACTION_START = "com.obubba.app.TIMER_START";
     public static final String ACTION_STOP = "com.obubba.app.TIMER_STOP";
@@ -87,6 +87,10 @@ public class TimerService extends Service {
                 return START_NOT_STICKY;
 
             case ACTION_UPDATE:
+                if (!running) {
+                    stopSelf();
+                    return START_NOT_STICKY;
+                }
                 // Update side for breast feeding switch
                 if (intent.hasExtra(EXTRA_SIDE)) {
                     side = intent.getStringExtra(EXTRA_SIDE);
@@ -94,10 +98,8 @@ public class TimerService extends Service {
                 if (intent.hasExtra(EXTRA_BABY_NAME)) {
                     babyName = intent.getStringExtra(EXTRA_BABY_NAME);
                 }
-                if (running) {
-                    saveTimerState();
-                    updateNotification();
-                }
+                saveTimerState();
+                updateNotification();
                 return START_STICKY;
 
             case ACTION_START_PREDICTION:

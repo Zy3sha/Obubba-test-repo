@@ -20514,7 +20514,7 @@ function App(){
           const tomorrow9=new Date();tomorrow9.setDate(tomorrow9.getDate()+1);tomorrow9.setHours(9,0,0,0);
           if(tomorrow9.getTime()>now){
             const msNames=upcomingMs.slice(0,3).map(m=>m.label).join(", ");
-            notifications.push({title:`New milestone${upcomingMs.length>1?"s":""} entering ${_bn}'s window`,body:`${msNames}${upcomingMs.length>3?" and "+(upcomingMs.length-3)+" more":""}. Check the Development tab for activities to try.`,id:stableId("ms",msKey),schedule:{at:tomorrow9},sound:"notification.wav"});
+            notifications.push({title:`New milestone${upcomingMs.length>1?"s":""} entering ${_bn}'s window`,body:`${msNames}${upcomingMs.length>3?" and "+(upcomingMs.length-3)+" more":""}. Check the Grow tab for activities to try.`,id:stableId("ms",msKey),schedule:{at:tomorrow9},sound:"notification.wav"});
             try{localStorage.setItem("_ms_notif_key",msKey);}catch{}
           }
         }
@@ -20532,7 +20532,7 @@ function App(){
           // New phase just started. notify at 9am tomorrow
           const tomorrow9=new Date();tomorrow9.setDate(tomorrow9.getDate()+1);tomorrow9.setHours(9,15,0,0);
           if(tomorrow9.getTime()>now){
-            notifications.push({title:`${_bn} has entered a new phase`,body:`Phase ${currentPhase.phase}: ${currentPhase.name}. ${currentPhase.fussy.split(".")[0]}. Check Development for details.`,id:stableId("phase",phaseKey),schedule:{at:tomorrow9},sound:"notification.wav"});
+            notifications.push({title:`${_bn} has entered a new phase`,body:`Phase ${currentPhase.phase}: ${currentPhase.name}. ${currentPhase.fussy.split(".")[0]}. Check Grow for details.`,id:stableId("phase",phaseKey),schedule:{at:tomorrow9},sound:"notification.wav"});
             try{localStorage.setItem("_phase_notif_key",phaseKey);}catch{}
           }
         }
@@ -26143,7 +26143,7 @@ function App(){
       const _safeSleepShown = localStorage.getItem("safe_sleep_shown_v1");
       if(_aw < 26 && !_safeSleepShown) {
         localStorage.setItem("safe_sleep_shown_v1", "1");
-        setTimeout(()=>showToast("🛏️ Safe sleep guide is in Insights → Sleep tab. back to sleep, clear cot, same room for 6 months", 6000, 1), 2000);
+        setTimeout(()=>showToast("🛏️ Safe sleep guide is in Understand → Sleep. back to sleep, clear cot, same room for 6 months", 6000, 1), 2000);
       }
     } catch {}
     // "What went well" analysis after bedtime
@@ -28544,8 +28544,8 @@ function App(){
   const tabSt=t=>({flex:"none",padding:"8px 14px 6px",border:_bN,background:"none",fontSize:10,fontWeight:tab===t?700:500,cursor:_cP,color:tab===t?C.ter:"var(--text-lt)",display:"flex",flexDirection:"column",alignItems:"center",gap:2,letterSpacing:"0.02em",position:"relative",transition:"transform 0.2s cubic-bezier(.23,1,.32,1)",borderRadius:12});
   const card={background:"var(--card-bg)",backdropFilter:"blur(var(--glass-blur))",WebkitBackdropFilter:"blur(var(--glass-blur))",border:"1px solid var(--card-border)",borderRadius:20,padding:"16px",marginBottom:14,boxShadow:"var(--card-shadow)",transition:"transform 0.2s cubic-bezier(.23,1,.32,1),box-shadow 0.25s ease"};
 
-  const tabIcons={day:"📅",insights:"💡",develop:"🧩",settings:"👤"};
-  const tabLabels={day:"Today",insights:"Insights",develop:"Development",settings:"Account"};
+  const tabIcons={day:"📅",insights:"💡",develop:"🌱",settings:"👤"};
+  const tabLabels={day:"Today",insights:"Understand",develop:"Grow",settings:"Account"};
   // Register FCM token for push notifications
   React.useEffect(()=>{
     if(!window._isNative || !window._fb || !window._fbUid || window._fbUid==="anon") return;
@@ -30911,12 +30911,12 @@ function App(){
           { icon:"👩‍🍼", title:"Bubba Care. your village", body:"Going out? Leaving " + _bn2 + " with someone?\n\nAccount → Bubba Care → Share or Send Link\n\nThe carer gets: live status, what to do next, emergency numbers, soothing tips, and big log buttons. They can log feeds and naps. you review when you're back.\n\nNo app install needed. just a link." },
           { icon:"💛", title:"We care about YOU too", body:"Tap the Wellbeing card for:\n\n• Daily mood check-in\n• Water tracker\n• Self-care checklist\n• If you tap 'Struggling', real helplines appear. not a generic page. real people who understand.\n\nYou matter. Not just as a parent. as a person." },
           { icon:"🥕", title:"Weaning when you're ready", body:"From 17 weeks, the Weaning hub unlocks:\n\n• Daily food suggestions (allergens every 3rd day)\n• Safety checklists for allergens\n• Iron-rich recipe library with filters\n• 'Try later' to skip without forgetting\n\nAfter 5pm it says 'meals done for today'. no pressure." },
-          { icon:"💡", title:"Insights that actually help", body:"The Insights tab shows:\n\n• 🗓 Sleep Coach. 14-day personalised plan (3 gentle methods)\n• Sleep patterns + what's improving\n• Feed trends + milk:solids balance\n• Growth charts (WHO percentiles)\n• 'Best day recipe'. what makes " + _bn2 + "'s best nights\n\nNot just data. actionable guidance." },
+          { icon:"💡", title:"Understand what is happening", body:"The Understand tab shows:\n\n• 🗓 Sleep Coach. 14-day personalised plan (3 gentle methods)\n• Sleep patterns + what's improving\n• Feed trends + milk:solids balance\n• Growth charts (WHO percentiles)\n• 'Best day recipe'. what makes " + _bn2 + "'s best nights\n\nNot just data. actionable guidance." },
           { icon:"⚙️", title:"Make it yours", body:"In Account → Preferences:\n\n• 💛 Gentle Mode. hides all scores if numbers stress you\n• 🏫 Nursery Mode. suppresses daytime warnings\n• 🫶 Parenting Style. responsive, routine, or family-led\n• 🤒 Medical conditions (reflux, CMPA)\n• 🌙 Bedtime routine timer you can customise\n\nThe app adapts to YOUR family." },
           { icon:"📱", title:"Widget, Siri & Live Activity", body:"OBubba works even when you're not in the app:\n\n• 'Hey Siri, log a feed', hands-free at 3am\n• Home screen widget shows feeds, naps, nappies\n• Lock screen timer shows active nap/sleep\n• Dynamic Island shows timer countdown\n\nAll without opening the app." },
           { icon:"👶", title:"For every family", body:"OBubba adapts to your situation:\n\n• Premature babies: adjusted age predictions\n• Twins: 'Log for all' + nap overlap window\n• Reflux/CMPA: custom targets from your dietitian\n• Partner sync: both parents see the same data\n• Archive child: memorial mode with love 🕊️\n\nEvery family is different. the app respects that." },
           { icon:"📤", title:"Share the moments", body:"Send to Family: share daily summaries as beautiful cards\n\nMorning + Evening handovers for carers\nHealth Report: one-tap formatted summary for your GP or health visitor\nShare cards for milestones and sleep wins\nWeekly digest: " + _bn2 + "'s week in review\n\nKeep everyone in the loop without retyping." },
-          { icon:"🧩", title:"Development & milestones", body:"The Development tab tracks:\n\n• 60+ milestones (social, motor, language, cognitive)\n• Teething chart (tap to log new teeth)\n• Age-appropriate play activities\n• Developmental phases + what to expect\n\nWhen milestones affect sleep, the app explains why." },
+          { icon:"🌱", title:"Grow with your baby", body:"The Grow tab tracks:\n\n• 60+ milestones (social, motor, language, cognitive)\n• Teething chart (tap to log new teeth)\n• Age-appropriate play activities\n• Developmental phases + what to expect\n\nWhen milestones affect sleep, the app explains why." },
           { icon:"🎉", title:"You're ready!", body:"Start with a morning wake. log feeds and naps as they happen. That's it.\n\nBy day 3: predictions get personal\nBy day 7: patterns emerge\nBy day 14: OBubba knows " + _bn2 + "'s rhythm\n\nReplay this tour anytime from Account.\n\nYou've got this. 💛" },
         ];
 
@@ -31102,7 +31102,7 @@ function App(){
       {/* Hidden photo input for diary/milestones */}
       <input ref={photoInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handlePhotoCapture}/>
       <div
-        style={{background:theme.primary,padding:"6px 10px 10px",paddingTop:"max(6px, env(safe-area-inset-top, 6px))",position:"relative",display:tab==="settings"?"none":"block"}}
+        style={{background:"transparent",padding:"6px 10px 10px",paddingTop:"max(6px, env(safe-area-inset-top, 6px))",position:"relative",display:tab==="settings"?"none":"block"}}
         onTouchStart={handleSwipeStart}
         onTouchEnd={handleSwipeEnd}
       >
@@ -32314,6 +32314,7 @@ function App(){
                       e.preventDefault();
                       e.stopPropagation();
                       window._obLp={fired:false,timer:null,moved:false};
+                      window._obLastTouchAction=Date.now();
                       action();
                     }}
                     onTouchCancel={(e)=>{
@@ -32321,6 +32322,13 @@ function App(){
                       const lp=window._obLp||{};
                       if(lp.timer){clearTimeout(lp.timer);}
                       window._obLp={fired:false,timer:null,moved:false};
+                    }}
+                    onClick={(e)=>{
+                      e.stopPropagation();
+                      if(Date.now()-(window._obLastTouchAction||0)<500)return;
+                      const lp=window._obLp||{};
+                      if(lp.fired||lp.moved)return;
+                      action();
                     }}
                     style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,flex:"0 0 18%",padding:"8px 2px",borderRadius:14,border:"none",background:"transparent",cursor:_cP,touchAction:"manipulation",WebkitTapHighlightColor:"transparent",minHeight:56,transition:"transform 0.08s ease, background 0.12s ease"}}
                     onTouchStartCapture={(e)=>{ try { e.currentTarget.style.transform="scale(0.94)"; e.currentTarget.style.background="rgba(192,112,136,0.06)"; } catch{} }}
@@ -34316,7 +34324,7 @@ function App(){
                   <div style={{fontSize:12,color:C.mid,lineHeight:1.7,marginTop:6}}>
                     {["\u2713 Always on their back","\u2713 Firm, flat mattress","\u2713 Room 16\u201320\u00B0C","\u2713 Clear cot (no toys, pillows, bumpers)","\u2713 Same room as you for 6 months"].map(function(t,i){ return React.createElement("div",{key:i,style:{padding:"1px 0"}},t); })}
                   </div>
-                  <div style={{fontSize:10,color:C.lt,marginTop:6}}>Source: NHS & Lullaby Trust · Safe sleep guidance lives in Insights → Sleep tab</div>
+                  <div style={{fontSize:10,color:C.lt,marginTop:6}}>Source: NHS & Lullaby Trust · Safe sleep guidance lives in Understand → Sleep</div>
                 </div>
               )}
 
@@ -35472,46 +35480,63 @@ function App(){
                     try { _enginePred = bedtimePrediction(); } catch { _enginePred = null; }
                   }
                   const _engineSaysBridge = !!(_enginePred && _enginePred.forceBridge);
-                  const gapToBed = bedM - cursor;
+                  const _tickBridgeBedMins = (tickDataRef.current || {}).bedMins;
+                  const _bridgeTargetBed = (typeof _tickBridgeBedMins === "number" && _tickBridgeBedMins > cursor)
+                    ? Math.min(_tickBridgeBedMins, _ageBedCeiling)
+                    : (scheduleOverride && scheduleOverride.bed)
+                      ? Math.min(scheduleOverride.bed, _ageBedCeiling)
+                      : bedM;
+                  const gapToBed = _bridgeTargetBed - cursor;
                   const _localSaysBridge = gapToBed > ww.max + 15;
 
-                  if ((_engineSaysBridge || _localSaysBridge) && napIdx >= expectedTotal) {
-                    // Use engine suggestion if available, else fall back to local math.
-                    const _engBridge = _engineSaysBridge && _enginePred.bridgeSuggestion;
-                    let bridgeStart;
-                    let bridgeDur;
-                    if (_engBridge && _engBridge.start) {
-                      const [_ebh, _ebm] = _engBridge.start.split(":").map(Number);
-                      bridgeStart = _ebh * 60 + _ebm;
-                      bridgeDur = _engBridge.duration || 20;
-                    } else {
-                      bridgeStart = cursor + Math.round(ww.min * 0.8);
-                      bridgeDur = 20;
-                    }
-                    const bridgeEnd = bridgeStart + bridgeDur;
-                    // Sanity: bridge has to start after cursor (can't bridge backward)
-                    // and end at least 30 min before bedtime cap. Also cap at
-                    // 23:30 so a very late plan doesn't schedule a "bridge nap"
-                    // at 2am tomorrow on today's timeline.
+                  if (_engineSaysBridge || _localSaysBridge) {
+                    const _engineBridgeList = _enginePred && Array.isArray(_enginePred.catchUpNaps)
+                      ? _enginePred.catchUpNaps
+                      : (_enginePred && _enginePred.bridgeSuggestion ? [_enginePred.bridgeSuggestion] : []);
                     const _MIDNIGHT_MINUS_30 = 23*60 + 30;
-                    const _safeStart = Math.min(_MIDNIGHT_MINUS_30, Math.max(cursor + 10, bridgeStart));
-                    const _safeEnd = _safeStart + bridgeDur;
-                    if (_safeEnd + 30 < _ageBedCeiling) {
+                    const _minBridgeBedGap = w < 30 ? 60 : 90;
+                    let _bridgesAdded = 0;
+                    while (_bridgesAdded < 4 && (_bridgeTargetBed - cursor > ww.max + 15 || (_engineSaysBridge && _bridgesAdded === 0))) {
+                      const _engBridge = _engineBridgeList[_bridgesAdded];
+                      let bridgeStart;
+                      let bridgeDur;
+                      if (_engBridge && _engBridge.start) {
+                        const [_ebh, _ebm] = _engBridge.start.split(":").map(Number);
+                        bridgeStart = _ebh * 60 + _ebm;
+                        bridgeDur = _engBridge.duration || (w < 22 ? 25 : w < 39 ? 20 : 15);
+                      } else {
+                        bridgeStart = cursor + Math.round(ww.min * 0.8);
+                        bridgeDur = w < 22 ? 25 : w < 39 ? 20 : 15;
+                      }
+                      // Sanity: bridge has to start after cursor (can't bridge backward)
+                      // and leave enough pre-bed space. Also cap at 23:30 so a very
+                      // late plan doesn't schedule a "bridge nap" after midnight.
+                      const _safeStart = Math.min(_MIDNIGHT_MINUS_30, Math.max(cursor + 10, bridgeStart));
+                      const _safeEnd = _safeStart + bridgeDur;
+                      if (_safeEnd + _minBridgeBedGap > _bridgeTargetBed) break;
+                      if (_safeEnd + 30 >= _ageBedCeiling) break;
                       items.push({
                         icon: "\u{1F309}", label: "Bridge nap",
                         time: `${fmt12(mtp(_safeStart))} \u2013 ${fmt12(mtp(_safeEnd))}`,
                         sub: `~${bridgeDur}m bridge nap to reach bedtime comfortably`,
-                        predicted: true, bridge: true, mins: _safeStart
+                        predicted: true, bridge: true, mins: _safeStart,
+                        predictedDur: bridgeDur
                       });
                       hasPredictions = true;
                       cursor = _safeEnd;
-                      // Recalculate bedtime from bridge end. Prefer engine's time
-                      // if it's reasonable (after cursor + 60min), else local.
+                      _bridgesAdded++;
+                    }
+                    if (_bridgesAdded > 0) {
+                      // Recalculate bedtime from the last bridge. Prefer engine's
+                      // time if it is still reachable; otherwise keep the target
+                      // bedtime once bridges have made the gap safe.
                       const _engineBed = _enginePred && _enginePred.time
                         ? (()=>{ const [_eh,_em] = _enginePred.time.split(":").map(Number); return _eh*60+_em; })()
                         : null;
-                      if (_engineBed && _engineBed >= cursor + 60) {
+                      if (_engineBed && _engineBed >= cursor + _minBridgeBedGap) {
                         bedM = _engineBed;
+                      } else if (_bridgeTargetBed >= cursor + _minBridgeBedGap) {
+                        bedM = _bridgeTargetBed;
                       } else {
                         bedM = clampBedtime(cursor + Math.round((ww.min + ww.max) / 2), w);
                       }
@@ -36045,7 +36070,7 @@ function App(){
                       <span style={{fontSize:20}}>🗓</span>
                       <div style={{flex:1}}>
                         <div style={{fontSize:13,fontWeight:700,color:C.deep}}>Sleep Coach is ready</div>
-                        <div style={{fontSize:11,color:C.mid,lineHeight:1.4}}>A personalised 14-day sleep plan is waiting for you in the <strong style={{color:C.deep}}>Insights</strong> tab.</div>
+                        <div style={{fontSize:11,color:C.mid,lineHeight:1.4}}>A personalised 14-day sleep plan is waiting for you in <strong style={{color:C.deep}}>Understand</strong>.</div>
                       </div>
                       <button onClick={()=>{haptic();try{localStorage.setItem("ob_coach_pointer_v1","1");}catch{}setTab("insights");}} style={{padding:"6px 12px",borderRadius:99,border:"none",background:"#7b68ee",color:"white",fontSize:11,fontWeight:700,cursor:_cP,flexShrink:0}}>Go →</button>
                       <button onClick={()=>{try{localStorage.setItem("ob_coach_pointer_v1","1");}catch{}setForceRender(c=>c+1);}} style={{background:"none",border:"none",color:C.lt,fontSize:14,cursor:_cP,padding:"12px",minWidth:44,minHeight:44,display:"flex",alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>✕</button>
@@ -38042,7 +38067,7 @@ function App(){
                       _parentTips = ["Keep following " + _bn6 + "'s cues", "Evening cluster feeds are normal and don't mean low supply"];
                     } else if (_bCount > 0) {
                       _statusText = _bn6 + " has had " + _bCount + " feed" + (_bCount!==1?"s":"") + " so far today (" + _bTarget + " is typical for this age).";
-                      _obubbaDoing = "OBubba will remind you when the next feed is due based on " + _bn6 + "'s personal rhythm.";
+                      _obubbaDoing = "OBubba can remind you when the next feed may be due, based on " + _bn6 + "'s recent rhythm.";
                       _parentTips = ["Watch for hunger cues: rooting, hand-to-mouth, fussing", "Crying is a late hunger cue — try to catch them earlier"];
                     } else {
                       _statusText = "No feeds logged yet today. " + _bn6 + " typically needs " + _bTarget + "–" + (fc6.breastTarget?fc6.breastTarget[1]:(_bTarget+2)) + " feeds per day at this age.";
@@ -39820,7 +39845,7 @@ function App(){
                       <span style={_S.f18}>🛏️</span>
                       <div style={_S.flex1}>
                         <div style={{fontSize:13,fontWeight:600,color:C.deep}}>Safe sleep guidance</div>
-                        <div style={{fontSize:11,color:C.lt,marginTop:2}}>Lullaby Trust guidelines. find it in Insights → Sleep tab</div>
+                        <div style={{fontSize:11,color:C.lt,marginTop:2}}>Lullaby Trust guidelines. find it in Understand → Sleep</div>
                       </div>
                     </div>
 
@@ -40460,7 +40485,7 @@ function App(){
                       🥄 Start Weaning Journey
                     </button>
                     <div style={{fontSize:11,color:C.lt,lineHeight:1.5}}>
-                      You can always access weaning tools from the Development tab
+                      You can always access weaning tools from the Grow tab
                     </div>
                   </div>
                 );
@@ -42042,7 +42067,7 @@ function App(){
               <div style={{background:"var(--card-bg-alt)",border:"1px solid var(--card-border)",borderRadius:12,padding:"12px 14px",marginBottom:4}}>
                 <div style={{fontSize:11,color:C.mid,lineHeight:1.7}}>
                   <span style={{fontWeight:700,color:C.deep}}>ℹ️ About this guidance</span><br/>
-                  Activities: NHS Start4Life developmental play guidance. Milestones: NHS developmental reviews framework. Growth: WHO Child Growth Standards. Every baby develops at their own pace. use these as inspiration, not a checklist. If you have concerns, speak to your ${_doctor}.
+                  Activities: NHS Start4Life developmental play guidance. Milestones: NHS developmental reviews framework. Growth: WHO Child Growth Standards. Every baby develops at their own pace. use these as inspiration, not a checklist. If you have concerns, speak to your GP or health visitor.
                 </div>
               </div>
 
@@ -42552,7 +42577,7 @@ function App(){
                   const _wt = localStorage.getItem("ob_widget_theme")||"auto";
                   const _active = _wt === t.id;
                   return (
-                    <button key={t.id} onClick={()=>{
+                    <button key={t.id} type="button" aria-label={"Widget colour: "+t.label} onClick={()=>{
                       haptic();
                       try{localStorage.setItem("ob_widget_theme",t.id);}catch{}
                       // Push to Android widget via SharedPreferences bridge
@@ -44277,7 +44302,7 @@ function App(){
             </div>
             <div style={{fontSize:11,color:C.lt,textAlign:"center",marginBottom:14,lineHeight:1.5}}>
               Source: NHS & Lullaby Trust{"\n"}
-              You can always find this in Insights → Sleep tab
+              You can always find this in Understand → Sleep
             </div>
             <button onClick={()=>setShowSafeSleepPopup(false)} style={{width:"100%",padding:"13px",borderRadius:99,border:"none",background:`linear-gradient(135deg,${C.ter},#a85a44)`,color:"white",fontSize:15,fontWeight:700,cursor:_cP,fontFamily:_fI}}>
               Got it
@@ -44634,7 +44659,7 @@ function App(){
               {babyName||"Baby"} is 6 months old. a whole new chapter begins
             </div>
             <div style={{fontSize:13,color:C.mid,lineHeight:1.7,marginBottom:16}}>
-              The app is growing with them. Weaning, allergen tracking, and solid food logging are now unlocked in the Development tab.
+              The app is growing with them. Weaning, allergen tracking, and solid food logging are now unlocked in the Grow tab.
             </div>
             <div style={{fontSize:13,color:C.mid,lineHeight:1.7,marginBottom:20}}>
               Your feeds, sleep tracking, and all your data stay exactly the same. 🤍
@@ -48192,8 +48217,9 @@ Severe: breathing changes, swelling of face/throat, very pale or floppy. please 
         for(let d=1;d<=daysInMonth;d++)cells.push(d);
         return(
           <div role="dialog" aria-modal="true" onClick={()=>setShowCalendar(false)} style={{position:"fixed",inset:0,background:"rgba(44,31,26,0.55)",backdropFilter:"blur(4px)",zIndex:9990,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-            <div onClick={e=>e.stopPropagation()} style={{background:"var(--bg-solid)",borderRadius:24,padding:"24px 20px",maxWidth:360,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,0.2)"}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+            <div onClick={e=>e.stopPropagation()} style={{background:"var(--bg-solid)",borderRadius:24,padding:"24px 20px",maxWidth:360,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,0.2)",position:"relative"}}>
+              <button type="button" aria-label="Close" onClick={()=>setShowCalendar(false)} style={{position:"absolute",top:10,right:10,width:34,height:34,borderRadius:"50%",border:"1px solid var(--card-border)",background:"var(--card-bg-solid)",color:C.mid,fontSize:18,cursor:_cP,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,paddingRight:30}}>
                 <button onClick={prevMonth} style={{background:"var(--card-bg)",border:`1px solid var(--card-border)`,borderRadius:10,width:36,height:36,cursor:_cP,fontSize:18,color:C.mid,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
                 <div style={{fontSize:18,fontWeight:700,color:C.deep,fontFamily:"Georgia,serif"}}>{monthName}</div>
                 <button onClick={nextMonth} style={{background:"var(--card-bg)",border:`1px solid var(--card-border)`,borderRadius:10,width:36,height:36,cursor:_cP,fontSize:18,color:C.mid,display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
@@ -49566,7 +49592,7 @@ Severe: breathing changes, swelling of face/throat, very pale or floppy. please 
             title: "Naps · 20 points",
             what: "Measures nap count plus total nap minutes against age-expected day sleep. The AASM ranges guide what's typical.",
             low: "If this is low, try: protecting the first nap (often the 'quality' nap), keeping wake windows age-appropriate, and a dim quiet room. Under-napped babies often sleep worse at night too.",
-            high: "Day sleep is well-distributed. Check it's not eating into night sleep. see the Sleep Budget in Insights."
+            high: "Day sleep is well-distributed. Check it's not eating into night sleep. see the Sleep Budget in Understand."
           },
           log: {
             title: "Logging · 20 points",

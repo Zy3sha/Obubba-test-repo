@@ -1,0 +1,92 @@
+{
+	"appId": "com.obubba.app",
+	"appName": "OBubba",
+	"webDir": "dist",
+	"server": {
+		"androidScheme": "https",
+		"iosScheme": "https",
+		"hostname": "app.obubba.com"
+	},
+	"plugins": {
+		"PushNotifications": {
+			"presentationOptions": [
+				"badge",
+				"sound",
+				"alert"
+			]
+		},
+		"LocalNotifications": {
+			"smallIcon": "ic_notification",
+			"iconColor": "#C07088",
+			"sound": "notification.wav"
+		},
+		"SplashScreen": {
+			"launchShowDuration": 0,
+			"launchAutoHide": false,
+			"launchFadeOutDuration": 300,
+			"backgroundColor": "#F0DDD6",
+			"showSpinner": false
+		},
+		"Keyboard": {
+			"resize": "none",
+			"resizeOnFullScreen": false,
+			"scroll": false
+		},
+		"StatusBar": {
+			"overlaysWebView": true,
+			"style": "LIGHT",
+			"backgroundColor": "#F0DDD6"
+		},
+		"AppShortcuts": {
+			"shortcuts": [
+				{
+					"id": "log_feed",
+					"title": "Log Feed",
+					"icon": "feed_icon"
+				},
+				{
+					"id": "log_sleep",
+					"title": "Log Sleep",
+					"icon": "sleep_icon"
+				},
+				{
+					"id": "log_nappy",
+					"title": "Log Nappy",
+					"icon": "nappy_icon"
+				},
+				{
+					"id": "start_timer",
+					"title": "Start Timer",
+					"icon": "timer_icon"
+				}
+			]
+		},
+		"BiometricAuth": {
+			"allowDeviceCredential": true
+		},
+		"CapacitorSQLite": {
+			"iosDatabaseLocation": "Library/CapacitorDatabase",
+			"iosIsEncryption": true,
+			"androidIsEncryption": true
+		},
+		"Camera": {
+			"presentationStyle": "popover"
+		},
+		"Network": {},
+		"Badge": {}
+	},
+	"ios": {
+		"scheme": "OBubba",
+		"contentInset": "always",
+		"allowsLinkPreview": true,
+		"backgroundColor": "#F0DDD6",
+		"preferredContentMode": "mobile",
+		"limitsNavigationsToAppBoundDomains": true
+	},
+	"android": {
+		"backgroundColor": "#F0DDD6",
+		"allowMixedContent": false,
+		"captureInput": true,
+		"webContentsDebuggingEnabled": false
+	}
+}

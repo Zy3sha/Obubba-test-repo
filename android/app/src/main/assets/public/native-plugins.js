@@ -532,36 +532,108 @@ var OBWidgets = {
   }
 };
 
-// ── 14. LIVE ACTIVITIES (iOS) ───────────────────────────────────
+// ── 14. LIVE ACTIVITIES (iOS) / FOREGROUND TIMER SERVICE (Android) ──
 var OBLiveActivity = {
   startTimer: function(opts) {
-    if (getPlatform() !== 'ios') return Promise.resolve();
-    var LA = _plug('OBLiveActivity');
-    if (!LA) return Promise.resolve();
-    try {
-      return LA.start({
-        type: opts.type,
-        startTime: opts.startTime || Date.now(),
-        babyName: opts.babyName || 'Baby',
-        side: opts.side || null
-      }).catch(function(){});
-    } catch(e) { return Promise.resolve(); }
+    var platform = getPlatform();
+    if (platform === 'ios') {
+      var LA = _plug('OBLiveActivity');
+      if (!LA) return Promise.resolve();
+      try {
+        return LA.start({
+          type: opts.type,
+          startTime: opts.startTime || Date.now(),
+          babyName: opts.babyName || 'Baby',
+          side: opts.side || null
+        }).catch(function(){});
+      } catch(e) { return Promise.resolve(); }
+    }
+    if (platform === 'android') {
+      var TS = _plug('OBTimerService');
+      if (!TS) return Promise.resolve();
+      try {
+        return TS.startTimer({
+          type: opts.type || 'feed',
+          startTime: opts.startTime || Date.now(),
+          babyName: opts.babyName || 'Baby',
+          side: opts.side || null
+        }).catch(function(){});
+      } catch(e) { return Promise.resolve(); }
+    }
+    return Promise.resolve();
   },
 
   updateTimer: function(opts) {
-    if (getPlatform() !== 'ios') return Promise.resolve();
-    var LA = _plug('OBLiveActivity');
-    if (!LA) return Promise.resolve();
-    try { return LA.update({ elapsed: opts.elapsed, side: opts.side }).catch(function(){}); }
-    catch(e) { return Promise.resolve(); }
+    var platform = getPlatform();
+    if (platform === 'ios') {
+      var LA = _plug('OBLiveActivity');
+      if (!LA) return Promise.resolve();
+      try { return LA.update({ elapsed: opts.elapsed, side: opts.side }).catch(function(){}); }
+      catch(e) { return Promise.resolve(); }
+    }
+    if (platform === 'android') {
+      var TS = _plug('OBTimerService');
+      if (!TS) return Promise.resolve();
+      try { return TS.updateTimer({ side: opts.side, babyName: opts.babyName }).catch(function(){}); }
+      catch(e) { return Promise.resolve(); }
+    }
+    return Promise.resolve();
   },
 
   stopTimer: function() {
-    if (getPlatform() !== 'ios') return Promise.resolve();
-    var LA = _plug('OBLiveActivity');
-    if (!LA) return Promise.resolve();
-    try { return LA.stop().catch(function(){}); }
-    catch(e) { return Promise.resolve(); }
+    var platform = getPlatform();
+    if (platform === 'ios') {
+      var LA = _plug('OBLiveActivity');
+      if (!LA) return Promise.resolve();
+      try { return LA.stop().catch(function(){}); }
+      catch(e) { return Promise.resolve(); }
+    }
+    if (platform === 'android') {
+      var TS = _plug('OBTimerService');
+      if (!TS) return Promise.resolve();
+      try { return TS.stopTimer().catch(function(){}); }
+      catch(e) { return Promise.resolve(); }
+    }
+    return Promise.resolve();
+  },
+
+  startPrediction: function(opts) {
+    var platform = getPlatform();
+    if (platform === 'ios') {
+      var LA = _plug('OBLiveActivity');
+      if (!LA || !LA.startPrediction) return Promise.resolve();
+      try { return LA.startPrediction(opts).catch(function(){}); }
+      catch(e) { return Promise.resolve(); }
+    }
+    if (platform === 'android') {
+      var TS = _plug('OBTimerService');
+      if (!TS) return Promise.resolve();
+      try { return TS.startPrediction({
+        targetTime: opts.targetTime || 0,
+        label: opts.label || 'Next event',
+        babyName: opts.babyName || 'Baby',
+        timeFormatted: opts.timeFormatted || null
+      }).catch(function(){}); }
+      catch(e) { return Promise.resolve(); }
+    }
+    return Promise.resolve();
+  },
+
+  stopPrediction: function() {
+    var platform = getPlatform();
+    if (platform === 'ios') {
+      var LA = _plug('OBLiveActivity');
+      if (!LA || !LA.stopPrediction) return Promise.resolve();
+      try { return LA.stopPrediction().catch(function(){}); }
+      catch(e) { return Promise.resolve(); }
+    }
+    if (platform === 'android') {
+      var TS = _plug('OBTimerService');
+      if (!TS) return Promise.resolve();
+      try { return TS.stopPrediction().catch(function(){}); }
+      catch(e) { return Promise.resolve(); }
+    }
+    return Promise.resolve();
   }
 };
 
@@ -733,16 +805,22 @@ var OBStore = {
   },
 
   // Get a single product by period (monthly/annual/lifetime)
+  // Prefers v2 products (new pricing) over v1 for new subscribers
   getProduct: function(period) {
     var _findProduct = function(products) {
       if (!products || !products.length) return null;
+      var fallback = null;
       for (var i = 0; i < products.length; i++) {
         var p = products[i];
-        if (period === 'monthly' && p.period === 'monthly') return p;
-        if (period === 'annual' && p.period === 'annual') return p;
-        if (period === 'lifetime' && p.type === 'nonConsumable') return p;
+        var match = (period === 'monthly' && p.period === 'monthly') ||
+                    (period === 'annual' && p.period === 'annual') ||
+                    (period === 'lifetime' && p.type === 'nonConsumable');
+        if (match) {
+          if (p.id && p.id.indexOf('.v2') !== -1) return p; // prefer v2
+          if (!fallback) fallback = p;
+        }
       }
-      return null;
+      return fallback;
     };
 
     // Use cached products if available
@@ -797,6 +875,20 @@ var OBStore = {
   }
 };
 
+// ── 22. APP REVIEW (SKStoreReviewController / Google Play Review) ─
+var OBReview = {
+  requestReview: function() {
+    if (!isNative()) return Promise.resolve({ requested: false });
+    var Review = _plug('OBReview');
+    if (!Review) return Promise.resolve({ requested: false });
+    try {
+      return Review.requestReview().then(function(result) {
+        return result || { requested: true };
+      }).catch(function() { return { requested: false }; });
+    } catch(e) { return Promise.resolve({ requested: false }); }
+  }
+};
+
 // ── 21. PREFERENCES (Key-Value, replaces localStorage on native) ─
 var OBPreferences = {
   get: function(key) {
@@ -843,7 +935,8 @@ window.OBNative = {
   screen: OBScreen,
   statusBar: OBStatusBar,
   preferences: OBPreferences,
-  store: OBStore
+  store: OBStore,
+  review: OBReview
 };
 
 // ── Set up window._purchases for app.jsx to consume ────────────
