@@ -120,6 +120,17 @@ if (!CanvasRenderingContext2D.prototype.roundRect) {
 const STORAGE_KEY = "babyTracker_v6";
 const params = new URLSearchParams(window.location.search);
 const quickAction = params.get("action");
+// Debug mode: silence console.log in production for cleaner device logs
+const OB_DEBUG = (() => {
+  try {
+    return params.get("debug") === "1" ||
+      localStorage.getItem("ob_debug") === "1" ||
+      /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname || "");
+  } catch { return false; }
+})();
+if (!OB_DEBUG) {
+  try { console.log = function(){}; } catch {}
+}
 
 const uid = () => { const _id = Date.now().toString(36)+Math.random().toString(36).slice(2,5); if(window._localEntryIds) window._localEntryIds.add(_id); return _id; };
 window._localEntryIds = new Set();
@@ -5311,6 +5322,8 @@ function App(){
                 try { trackEvent("timer_stopped", { type: "nap", duration_mins: _durS, source: "widget" }); } catch {}
               }
               setNapOn(false); setNapStartT(null); setNapSec(0); setNapEntryId(null); setNapPaused(false);
+              // Set stop timestamp BEFORE clearing keys — orphan recovery checks this to avoid resurrection
+              try{localStorage.setItem("ob_nap_stopped_at",String(Date.now()));}catch{}
               ["nap_on","nap_startT","nap_sec","nap_entry_id","nap_paused","nap_paused_sec","nap_startMs","nap_start_day","nap_start_day"].forEach(k=>{try{localStorage.removeItem(k);}catch{}});
               if(_isNative) window.Capacitor?.Plugins?.OBLiveActivity?.stop?.().catch(()=>{});
               _androidTimerStop();
@@ -5576,7 +5589,13 @@ function App(){
     // Widget button intents write to UserDefaults async. poll aggressively to catch it
     OB.lifecycle.onResume(()=>{
       OB.statusBar.setStyle(document.body.classList.contains('dark-mode'));
-      OB.widgets.updateWidgetData();
+      // Force widget refresh with current cached data on every resume
+      try {
+        var _wdResume = localStorage.getItem("ob_widget_data_v1");
+        if(_wdResume && window.Capacitor?.Plugins?.OBWidgetBridge) {
+          window.Capacitor.Plugins.OBWidgetBridge.setData({ json: _wdResume }).catch(()=>{});
+        }
+      } catch{}
       // Re-check premium on resume (subscription may have been purchased/restored externally)
       if(STORE_READY && !_isOwner && window._purchases && window._purchases.checkEntitlements){
         window._purchases.checkEntitlements().then(function(_p){
@@ -5601,9 +5620,14 @@ function App(){
       }
     });
 
-    // Listen for app pause. save widget data
+    // Listen for app pause. push widget data so it's fresh when user sees widget
     OB.lifecycle.onPause(()=>{
-      OB.widgets.updateWidgetData();
+      try {
+        var _wdPause = localStorage.getItem("ob_widget_data_v1");
+        if(_wdPause && window.Capacitor?.Plugins?.OBWidgetBridge) {
+          window.Capacitor.Plugins.OBWidgetBridge.setData({ json: _wdPause }).catch(()=>{});
+        }
+      } catch{}
     });
 
     // Handle deep links
@@ -9892,9 +9916,11 @@ function App(){
       const allKeys = [];
       for (let i = 0; i < localStorage.length; i++) allKeys.push(localStorage.key(i));
       allKeys.forEach(k => {
-        // Keep only device-level prefs that aren't account-specific
+        // Keep device-level prefs + any keys not belonging to OBubba
         const keep = k === "ob_theme" || k === "ob_widget_theme" || k === "ob_locale";
-        if (!keep) { try { localStorage.removeItem(k); } catch {} }
+        // Only clear keys that are known OBubba prefixes or explicit known keys
+        const isOBubba = k.startsWith("ob_") || k.startsWith("obubba") || k.startsWith("nap_") || k.startsWith("bed_") || k.startsWith("breast_") || k.startsWith("timer_") || ["children_v1","active_child","backup_code","family_code","family_username","auth_verified","tut_v2","install_date_v1","onboarded_v2","use_personal_recs_v1","fluid_unit_v1","measure_unit_v1","reminders_v1","appointments_v1","pinned_notes_v1","meds_v1","saved_meds_v1","emergency_contacts_v1","carer_notes_v1","carer_comfort_v1","wellbeing_history_v1","allergen_profile_v1","bio_enabled","last_breast_side","pred_accuracy_v1","_lastWidgetData","_hasBreast"].includes(k);
+        if (!keep && isOBubba) { try { localStorage.removeItem(k); } catch {} }
       });
     } catch {}
 
@@ -11489,6 +11515,11 @@ function App(){
   // the timer is running — the 30s tick updates end!=start, but _active stays true).
   useEffect(()=>{
     if(napOn) return; // timer already running
+    // Don't resurrect if nap was just stopped via widget/Siri (flag set before React state updates)
+    try {
+      const _stopTs = localStorage.getItem("ob_nap_stopped_at");
+      if(_stopTs && (Date.now() - parseInt(_stopTs)) < 10000) return; // stopped within last 10s
+    } catch{}
     const todayK = todayStr();
     const todayEntries = days[todayK] || [];
     let ongoingNap = todayEntries.find(e => e.type === "nap" && e.start && (e._active || !e.end || e.end === e.start) && !e.night);
@@ -13318,20 +13349,8 @@ function App(){
                         </div>
                         <button onClick={()=>{
                           haptic();
-                          const newTime = prompt("Started earlier? Enter time (e.g. 2:15am, 02:15):");
-                          if(newTime){
-                            const parsed = parseTimeFree(newTime);
-                            if(parsed){
-                              setBreastStartTime(parsed);
-                              try{localStorage.setItem("breast_startTime",parsed);}catch{}
-                              const [h,m]=parsed.split(":").map(Number);
-                              const now=new Date();
-                              let elapsed=Math.max(0,Math.floor((now.getTime()-new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0).getTime())/1000));
-                              if(elapsed>86400) elapsed=0;
-                              setBreastSec({L:breastSide==="L"?elapsed:0, R:breastSide==="R"?elapsed:0});
-                              showToast("🤱 Start time updated to "+fmt12(parsed),1500,1);
-                            } else { showToast("Couldn't parse that time",1500,2); }
-                          }
+                          setShowBreastStartPicker(true);
+                          setBreastCustomStart(breastStartTime||nowTime());
                         }} style={{background:"none",border:"none",color:C.lt,fontSize:10,cursor:_cP,textAlign:"center",width:"100%",marginTop:4,fontFamily:_fI}}>
                           Started earlier? Tap to edit
                         </button>
@@ -44193,7 +44212,6 @@ function App(){
                     🛠️ It needs some work
                   </button>
                 </div>
-                <button onClick={()=>{dismissReview(false);}} style={{background:"none",border:"none",color:C.lt,fontSize:12,cursor:_cP,marginTop:14,fontStyle:"italic"}}>Maybe later</button>
               </div>
           </div>
         </div>
@@ -46325,11 +46343,7 @@ Severe: breathing changes, swelling of face/throat, very pale or floppy. please 
               ))}
               <button onClick={()=>{
                 haptic();
-                const _name2 = prompt("Step name (e.g. 'White noise on')");
-                if (!_name2) return;
-                const _emoji = prompt("Emoji (e.g. 🎵)") || "✨";
-                const _dur = parseInt(prompt("Duration in minutes") || "5") || 5;
-                const _newSteps = [..._steps, {emoji:_emoji, title:_name2, duration:_dur, note:""}];
+                const _newSteps = [..._steps, {emoji:"✨", title:"New step", duration:5, note:"", _editing:true}];
                 setCustomRoutine(_newSteps);
               }} style={{width:"100%",padding:"12px",borderRadius:12,border:`2px dashed ${C.blush}`,background:"transparent",color:C.mid,fontSize:13,fontWeight:600,cursor:_cP,marginBottom:12}}>
                 + Add step
